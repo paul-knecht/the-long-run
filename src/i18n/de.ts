@@ -97,6 +97,7 @@ export const de: Record<keyof typeof en, string> = {
   // The crash
   'crash.fall': '▼ {pct} seit dem Hoch. Das sind {loss} deiner Anlagen, und es fällt weiter.',
   'crash.fall.now': '▼ {pct} seit dem Hoch. Das sind bisher {loss} deiner Anlagen.',
+  'crash.fall.gain': '▼ {pct} seit dem Hoch. Deine Anlagen haben seitdem trotzdem {gain} gewonnen.',
   'crash.fall.none': '▼ {pct} seit dem Hoch. Von deinem Geld liegt nichts an der Börse.',
   'crash.chartLabel': 'Kurs des ETF',
   'crash.investedLabel': 'Deine Anlagen',

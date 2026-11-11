@@ -125,6 +125,7 @@ const required = [
   'crash.buyMore.disabled',
   'crash.fall',
   'crash.fall.now',
+  'crash.fall.gain',
   'crash.fall.none',
   'crash.chartLabel',
   'crash.investedLabel',
@@ -199,6 +200,7 @@ test('placeholders the screens rely on', () => {
   expect(ph('event.bill.text.sold')).toBe('{amount}')
   expect(ph('crash.fall')).toBe('{loss},{pct}')
   expect(ph('crash.fall.now')).toBe('{loss},{pct}')
+  expect(ph('crash.fall.gain')).toBe('{gain},{pct}')
   expect(ph('event.bill.text.unpaid')).toBe('')
   expect(ph('crash.fall.none')).toBe('{pct}')
   expect(ph('ending.paidIn')).toBe('{paidIn}')

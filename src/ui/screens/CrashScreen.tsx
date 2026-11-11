@@ -53,8 +53,14 @@ export function CrashScreen(p: {
   const anyInvested = Math.round(invested) > 0
   const loss = marketLoss(setup, snapshots, highNow, now)
   const pct = percent(fall, lang)
-
   const arrived = shown >= pending.at
+  // "and falling" only while the fall is still being drawn; at the choice, what it has cost so far.
+  // A single stock can rise by more than the ETF fell; then the line says what the investments gained.
+  const gained = Math.round(loss) < 0
+  const fallText = gained
+    ? t('crash.fall.gain', { pct, gain: money(-loss, lang) })
+    : t(arrived ? 'crash.fall.now' : 'crash.fall', { pct, loss: money(loss, lang) })
+
   const year = yearOnScreen(now, pending)
   const atTakeover = snapshots[pending.at]
   const canBuyMore = atTakeover.holdings.cash > atTakeover.emergencyTarget
@@ -83,9 +89,8 @@ export function CrashScreen(p: {
           age={ageInYear(year)}
           total={invested}
           totalLabel={t('crash.investedLabel')}
-          change={-loss}
-          // "and falling" only while the fall is still being drawn; at the choice, what it has cost so far.
-          changeText={t(arrived ? 'crash.fall.now' : 'crash.fall', { pct, loss: money(loss, lang) })}
+          change={gained ? -1 : -loss}
+          changeText={fallText}
           mood="crash"
         />
       ) : (

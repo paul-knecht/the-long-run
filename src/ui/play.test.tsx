@@ -474,6 +474,19 @@ describe('the crash', () => {
     expect(decide).toHaveBeenCalledWith({ kind: 'crash', at: 50, choice: 'buyMore' })
   })
 
+  test('when a single stock rose more than the ETF fell, the line says the investments gained', () => {
+    const pending = { kind: 'crash', at: 50, drawdown: 0.2 } as const
+    const timeline = timelineAt(50, { cash: 20000, etf: 1000, stock: 10000 }, pending, 30)
+    // Jonas's stock beats the market by 3% a month through the fall.
+    const setup = { ...setupFor(timeline), stockNoise: Array.from({ length: MONTHS }, (_, i) => (i >= 30 ? 0.03 : 0)) }
+    const gain = -marketLoss(setup, timeline.snapshots, 30, 50)
+    expect(gain).toBeGreaterThan(1000)
+    render(<CrashScreen setup={setup} timeline={timeline} pending={pending} shown={50} decide={() => {}} />)
+    const header = document.querySelector('header')!
+    expect(within(header).getByText(`▼ 20% from the high. Your investments have still gained ${money(gain, 'en')} since then.`)).toBeInTheDocument()
+    expect(header.textContent).not.toMatch(/-\s*€/)
+  })
+
   test('the voices and the choices wait until the fall has been drawn', () => {
     const pending = { kind: 'crash', at: 50, drawdown: 0.3 } as const
     const timeline = timelineAt(50, { cash: 20000, etf: 10000 }, pending, 30)

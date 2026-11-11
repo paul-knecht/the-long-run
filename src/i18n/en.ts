@@ -97,6 +97,7 @@ export const en = {
   // The crash
   'crash.fall': "▼ {pct} from the high. That's {loss} of your investments, and falling.",
   'crash.fall.now': "▼ {pct} from the high. That's {loss} of your investments so far.",
+  'crash.fall.gain': '▼ {pct} from the high. Your investments have still gained {gain} since then.',
   'crash.fall.none': '▼ {pct} from the high. None of your money is in the market.',
   'crash.chartLabel': "The ETF's price",
   'crash.investedLabel': 'Your investments',
