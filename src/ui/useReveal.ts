@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MONTHS } from '../sim/constants'
+import { MONTHS, START_AGE } from '../sim/constants'
 import type { Pending, Snapshot } from '../sim/types'
 
 /** How long one month takes to draw in a normal year. */
@@ -43,6 +43,9 @@ export function yearOnScreen(month: number, pending: Pending): number {
   if (month % 12 === 0 && month < MONTHS && !takeoverHere) return month / 12 + 1
   return Math.max(1, Math.ceil(month / 12))
 }
+
+/** The player's age in year `year` of the run: the start screen's age in year 1, one more each year. */
+export const ageInYear = (year: number): number => START_AGE + year - 1
 
 /**
  * The month the fall into a takeover at `at` began: the last month up to `at` at which the index

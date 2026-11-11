@@ -114,6 +114,7 @@ const required = [
   ]),
   'event.bill.text.covered',
   'event.bill.text.sold',
+  'event.bill.text.unpaid',
   ...[1, 2, 3, 4].map((n) => `crash.headline.${n}`),
   'crash.werner',
   'crash.keller',
@@ -123,6 +124,7 @@ const required = [
   'crash.buyMore',
   'crash.buyMore.disabled',
   'crash.fall',
+  'crash.fall.now',
   'crash.fall.none',
   'crash.chartLabel',
   'crash.investedLabel',
@@ -196,6 +198,8 @@ test('placeholders the screens rely on', () => {
   expect(ph('card.emergency.you.unpaid')).toBe('')
   expect(ph('event.bill.text.sold')).toBe('{amount}')
   expect(ph('crash.fall')).toBe('{loss},{pct}')
+  expect(ph('crash.fall.now')).toBe('{loss},{pct}')
+  expect(ph('event.bill.text.unpaid')).toBe('')
   expect(ph('crash.fall.none')).toBe('{pct}')
   expect(ph('ending.paidIn')).toBe('{paidIn}')
   expect(ph('ending.paidIn.unpaid')).toBe('{paidIn}')

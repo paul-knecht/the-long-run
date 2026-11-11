@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
 import { Header } from './components/Header'
+import { ageInYear } from './useReveal'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -62,7 +63,8 @@ test('the game starts from the keyboard', async () => {
 test('year 1 shows the age, an empty total and the chart', async () => {
   render(<App seed={3} instant cooldownMs={0} />); await userEvent.click(screen.getByRole('button', { name: /start/i }))
   expect(screen.getByText('Year 1 of 20')).toBeInTheDocument()
-  expect(screen.getByText('Age 23')).toBeInTheDocument()
+  // The start screen said 22: year 1 is that year.
+  expect(screen.getByText('Age 22')).toBeInTheDocument()
   // The year screen lists €0 in each account too, so look in the header.
   expect(within(document.querySelector('header')!).getByText('€0')).toBeInTheDocument()
   expect(screen.getByRole('img', { name: 'Your money over the years' })).toBeInTheDocument()
@@ -104,6 +106,12 @@ describe('reduced motion', () => {
     expect(screen.queryAllByTestId('reply')).toHaveLength(0)
     expect(screen.getByText('Year 1 of 20')).toBeInTheDocument()
   })
+})
+
+test('the age goes up by one each year: 22 in year 1, 41 in year 20', () => {
+  expect(ageInYear(1)).toBe(22)
+  expect(ageInYear(2)).toBe(23)
+  expect(ageInYear(20)).toBe(41)
 })
 
 describe('Header', () => {

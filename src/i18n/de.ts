@@ -76,6 +76,7 @@ export const de: Record<keyof typeof en, string> = {
   'event.bill.text': 'Schlechte Nachrichten zum Auto: neue Kupplung und neue Bremsen. Macht zusammen {amount}.',
   'event.bill.text.covered': 'Du zahlst sie von deinem Tagesgeld.',
   'event.bill.text.sold': 'Dein Tagesgeld reicht nicht ganz, deshalb werden Anlagen für {amount} zum aktuellen Kurs verkauft.',
+  'event.bill.text.unpaid': 'Dein Tagesgeld reicht nicht, und Anlagen zum Verkaufen hast du keine.',
   'event.bill.reply.ok': 'Rechnung bezahlen',
 
   // A raise
@@ -95,6 +96,7 @@ export const de: Record<keyof typeof en, string> = {
 
   // The crash
   'crash.fall': '▼ {pct} seit dem Hoch. Das sind {loss} deiner Anlagen, und es fällt weiter.',
+  'crash.fall.now': '▼ {pct} seit dem Hoch. Das sind bisher {loss} deiner Anlagen.',
   'crash.fall.none': '▼ {pct} seit dem Hoch. Von deinem Geld liegt nichts an der Börse.',
   'crash.chartLabel': 'Kurs des ETF',
   'crash.investedLabel': 'Deine Anlagen',

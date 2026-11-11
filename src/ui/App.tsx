@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import { market } from '../data'
 import { type Lang, detectLang, t as translate } from '../i18n'
-import { MONTHS, START_AGE } from '../sim/constants'
+import { MONTHS } from '../sim/constants'
 import { buildEnding } from '../sim/ending'
 import { createSetup } from '../sim/setup'
 import { decisionKey, simulate } from '../sim/simulate'
@@ -15,7 +15,7 @@ import { MessageScreen, Reaction } from './screens/MessageScreen'
 import { PracticeScreen } from './screens/PracticeScreen'
 import { StartScreen } from './screens/StartScreen'
 import { YearScreen } from './screens/YearScreen'
-import { FALL_MS, MONTH_MS, fallStart, useReveal, yearOnScreen } from './useReveal'
+import { FALL_MS, MONTH_MS, ageInYear, fallStart, useReveal, yearOnScreen } from './useReveal'
 
 type Phase = 'start' | 'play' | 'ending' | 'practice'
 type Mood = 'calm' | 'crash'
@@ -140,17 +140,16 @@ function PlayScreen({ setup, timeline, shown, busy, mood, salary, reaction, deci
   // "This year" is the year being drawn, or the one just finished at a year boundary.
   const yearStart = shown === 0 ? 0 : Math.floor((shown - 1) / 12) * 12
   const total = timeline.snapshots[shown].total
-  const { dials } = timeline
   return (
     <main className="screen play">
-      <Header year={year} age={START_AGE + year} total={total} change={total - timeline.snapshots[yearStart].total} mood={mood} />
+      <Header year={year} age={ageInYear(year)} total={total} change={total - timeline.snapshots[yearStart].total} mood={mood} />
       <Chart series={[{ id: 'you', values: timeline.snapshots.map((s) => s.total), emphasis: 'main' }]} length={MONTHS + 1} shown={shown} mood={mood} />
       {pending?.kind === 'year' && (
         <>
           {reaction && <Reaction event={reaction.event} choice={reaction.choice} />}
-          {/* A new year, or an action that changed the dials in force, starts the dials afresh. */}
+          {/* A new year starts the dials afresh; an action taken in the year keeps the screen. */}
           <YearScreen
-            key={`${pending.at}:${dials.saveRate}:${dials.etfShare}`}
+            key={pending.at}
             timeline={timeline}
             pending={pending}
             shown={shown}

@@ -76,6 +76,7 @@ export const en = {
   'event.bill.text': 'Bad news about your car: new clutch and new brakes. That comes to {amount}.',
   'event.bill.text.covered': 'You pay it from your savings account.',
   'event.bill.text.sold': "Your savings account doesn't cover it all, so {amount} of your investments get sold at this month's price.",
+  'event.bill.text.unpaid': "Your savings account doesn't cover it, and you have no investments to sell.",
   'event.bill.reply.ok': 'Pay the bill',
 
   // A raise
@@ -95,6 +96,7 @@ export const en = {
 
   // The crash
   'crash.fall': "▼ {pct} from the high. That's {loss} of your investments, and falling.",
+  'crash.fall.now': "▼ {pct} from the high. That's {loss} of your investments so far.",
   'crash.fall.none': '▼ {pct} from the high. None of your money is in the market.',
   'crash.chartLabel': "The ETF's price",
   'crash.investedLabel': 'Your investments',

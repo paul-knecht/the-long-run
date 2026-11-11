@@ -1,13 +1,13 @@
 import { type JSX, useEffect, useId, useRef } from 'react'
 import { type Key, money, percent } from '../../i18n'
-import { MONTHS, START_AGE } from '../../sim/constants'
+import { MONTHS } from '../../sim/constants'
 import { marketLoss } from '../../sim/portfolio'
 import type { CrashChoice, Decision, Pending, RunSetup, Timeline } from '../../sim/types'
 import { Chart } from '../components/Chart'
 import { Appear, ChatBubble, Headline } from '../components/ChatBubble'
 import { Header } from '../components/Header'
 import { useLang } from '../lang'
-import { fallStart, yearOnScreen } from '../useReveal'
+import { ageInYear, fallStart, yearOnScreen } from '../useReveal'
 
 const HEADLINES: readonly Key[] = ['crash.headline.1', 'crash.headline.2', 'crash.headline.3', 'crash.headline.4']
 const VOICES: readonly { from: Key; text: Key }[] = [
@@ -80,16 +80,17 @@ export function CrashScreen(p: {
       {anyInvested ? (
         <Header
           year={year}
-          age={START_AGE + year}
+          age={ageInYear(year)}
           total={invested}
           totalLabel={t('crash.investedLabel')}
           change={-loss}
-          changeText={t('crash.fall', { pct, loss: money(loss, lang) })}
+          // "and falling" only while the fall is still being drawn; at the choice, what it has cost so far.
+          changeText={t(arrived ? 'crash.fall.now' : 'crash.fall', { pct, loss: money(loss, lang) })}
           mood="crash"
         />
       ) : (
         // The market is down; the line carries the arrow and the colour of a fall.
-        <Header year={year} age={START_AGE + year} total={snapshots[now].total} change={-1} changeText={t('crash.fall.none', { pct })} mood="crash" />
+        <Header year={year} age={ageInYear(year)} total={snapshots[now].total} change={-1} changeText={t('crash.fall.none', { pct })} mood="crash" />
       )}
       <p className="chart-caption" aria-hidden="true">
         {t('crash.chartLabel')}

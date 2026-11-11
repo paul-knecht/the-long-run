@@ -1,9 +1,9 @@
 import { type JSX, useEffect, useRef } from 'react'
-import { type Key, money } from '../../i18n'
+import { type Key, type Lang, money } from '../../i18n'
 import { BILL, WINDFALL } from '../../sim/constants'
 import type { Decision, EventChoice, EventId, Holdings, Pending, Timeline } from '../../sim/types'
 import { Appear, ChatBubble } from '../components/ChatBubble'
-import { useLang } from '../lang'
+import { type LangContextValue, useLang } from '../lang'
 
 /** Who writes, what they write, the replies the player can give and, for some, how the sender answers. */
 interface Script {
@@ -50,13 +50,23 @@ const SCRIPTS: Record<EventId, Script> = {
   },
 }
 
+/** What the investments hold, which paying the bill can sell. */
+const invested = (h: Holdings): number => h.etf + h.fund + h.stock
+
 /** What paying the bill will sell: the part the savings account cannot cover, up to what the investments hold (as the engine does). */
-const billSold = (h: Holdings): number => Math.min(Math.max(0, BILL - h.cash), h.etf + h.fund + h.stock)
+const billSold = (h: Holdings): number => Math.min(Math.max(0, BILL - h.cash), invested(h))
+
+/** The bill's second bubble: the savings account pays it, investments get sold, or there is nothing to sell. */
+function billPays(covered: boolean | undefined, h: Holdings, lang: Lang, t: LangContextValue['t']): string {
+  if (covered) return t('event.bill.text.covered')
+  if (Math.round(invested(h)) > 0) return t('event.bill.text.sold', { amount: money(billSold(h), lang) })
+  return t('event.bill.text.unpaid')
+}
 
 /**
  * Someone writes: the sender, one or two bubbles, and a reply button per choice. The bill also says
- * whether the savings account covers it or investments get sold. `salary` is the monthly pay from
- * the coming month on, which the raise names. Nothing here comments on a choice.
+ * whether the savings account covers it, investments get sold, or there is nothing to sell. `salary`
+ * is the monthly pay from the coming month on, which the raise names. Nothing here comments on a choice.
  */
 export function MessageScreen(p: {
   timeline: Timeline
@@ -80,9 +90,7 @@ export function MessageScreen(p: {
     event === 'bill'
       ? [
           t('event.bill.text', { amount: money(BILL, lang) }),
-          pending.billCovered
-            ? t('event.bill.text.covered')
-            : t('event.bill.text.sold', { amount: money(billSold(timeline.snapshots[at].holdings), lang) }),
+          billPays(pending.billCovered, timeline.snapshots[at].holdings, lang, t),
         ]
       : event === 'windfall'
         ? [t('event.windfall.text', { amount: money(WINDFALL, lang) })]

@@ -1,7 +1,7 @@
 import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { market } from '../data'
-import { money, percent } from '../i18n'
+import { money, percent, t } from '../i18n'
 import { ETF_COST, MONTHS, START_DIALS } from '../sim/constants'
 import { marketLoss } from '../sim/portfolio'
 import { createSetup } from '../sim/setup'
@@ -9,7 +9,7 @@ import { simulate } from '../sim/simulate'
 import type { Decision, Holdings, Pending, RunSetup, Snapshot, Timeline } from '../sim/types'
 import { App, useLang as useLangFromApp } from './App'
 import { Dial } from './components/Dial'
-import { useLang } from './lang'
+import { LangContext, useLang } from './lang'
 import { CrashScreen } from './screens/CrashScreen'
 import { MessageScreen } from './screens/MessageScreen'
 import { useReveal } from './useReveal'
@@ -186,6 +186,26 @@ describe('the year screen', () => {
     expect(screen.getByRole('button', { name: /next year/i })).toBeInTheDocument()
   })
 
+  test('"Get back in" keeps the save dial the player just moved, and the split goes back to where it was', async () => {
+    await start(3) // Uncle Werner writes at month 12.
+    fireEvent.change(split(), { target: { value: '80' } })
+    await userEvent.click(screen.getByRole('button', { name: /next year/i }))
+    await userEvent.click(screen.getByRole('button', { name: 'Fine, all of it into savings' }))
+    expect(screen.getByText('Year 2 of 20')).toBeInTheDocument()
+    expect(split()).toHaveValue('0')
+    fireEvent.change(save(), { target: { value: '25' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Get back in' }))
+    expect(screen.queryByRole('button', { name: 'Get back in' })).toBeNull()
+    expect(save()).toHaveValue('25')
+    expect(split()).toHaveValue('80')
+    // With the button gone, "Next year" has the focus, and it records both dials.
+    expect(screen.getByRole('button', { name: /next year/i })).toHaveFocus()
+    await userEvent.click(screen.getByRole('button', { name: /next year/i }))
+    expect(screen.getByText('Year 3 of 20')).toBeInTheDocument()
+    expect(save()).toHaveValue('25')
+    expect(split()).toHaveValue('80')
+  })
+
   test('after a year has played, one headline matches how the market went', async () => {
     await start(25)
     expect(screen.queryByText('Headline')).toBeNull()
@@ -305,6 +325,21 @@ describe('the message screen', () => {
     expect(screen.getByRole('button', { name: 'Pay the bill' })).toHaveAttribute('data-testid', 'reply')
   })
 
+  test('the bill says so when the savings account falls short and nothing is invested to sell', () => {
+    const pending = { kind: 'event', at: 96, event: 'bill', billCovered: false } as const
+    const { unmount } = render(<MessageScreen timeline={timelineAt(96, { cash: 1000, etf: 0.3 }, pending)} pending={pending} salary={2500} decide={() => {}} />)
+    expect(screen.getByText("Your savings account doesn't cover it, and you have no investments to sell.")).toBeInTheDocument()
+    expect(screen.queryByText(/of your investments get sold/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Pay the bill' })).toBeInTheDocument()
+    unmount()
+    render(
+      <LangContext.Provider value={{ lang: 'de', setLang: () => {}, t: (key, params) => t('de', key, params) }}>
+        <MessageScreen timeline={timelineAt(96, {}, pending)} pending={pending} salary={2500} decide={() => {}} />
+      </LangContext.Provider>,
+    )
+    expect(screen.getByText('Dein Tagesgeld reicht nicht, und Anlagen zum Verkaufen hast du keine.')).toBeInTheDocument()
+  })
+
   test('the windfall offers three replies, the raise names the new salary', async () => {
     const decide = vi.fn()
     const windfall = { kind: 'event', at: 120, event: 'windfall' } as const
@@ -345,6 +380,8 @@ describe('the crash', () => {
     const app = await toCrash()
     expect(app).toHaveAttribute('data-mood', 'crash')
     expect(screen.getByText('Year 4 of 20')).toBeInTheDocument()
+    // 22 in year 1, so 25 in year 4.
+    expect(screen.getByText('Age 25')).toBeInTheDocument()
     expect(screen.getByText(/Billions wiped out|Panic selling|Get out while you still can|Savers flee/)).toBeInTheDocument()
     expect(screen.getByText("Told you. CASINO. Get out now, before it's all gone.")).toBeInTheDocument()
     expect(screen.getByText(/May I suggest something a little safer/)).toBeInTheDocument()
@@ -388,7 +425,8 @@ describe('the crash', () => {
     expect(within(header).getByText('Your investments')).toBeInTheDocument()
     expect(within(header).queryByText('Your money')).toBeNull()
     expect(within(header).getByText(money(invested, 'en'))).toBeInTheDocument()
-    const line = `▼ ${percent(pct, 'en')} from the high. That's ${money(loss, 'en')} of your investments, and falling.`
+    // The decision is pending: the line no longer says it keeps falling.
+    const line = `▼ ${percent(pct, 'en')} from the high. That's ${money(loss, 'en')} of your investments so far.`
     expect(within(header).getByText(line)).toBeInTheDocument()
     expect(line.match(/%/g)).toHaveLength(1)
     expect(header.textContent).not.toMatch(/\b(18|19|20)\d\d\b/)
@@ -431,7 +469,7 @@ describe('the crash', () => {
     // Each month of the fall took its step off the €10,000: about €2,219, not the €2,500 of a fall from €12,500.
     const loss = timeline.snapshots.slice(31).reduce((sum, s) => sum + 10000 * (1 - s.index / timeline.snapshots[s.month - 1].index), 0)
     expect(money(loss, 'en')).toBe('€2,219')
-    expect(screen.getByText("▼ 20% from the high. That's €2,219 of your investments, and falling.")).toBeInTheDocument()
+    expect(screen.getByText("▼ 20% from the high. That's €2,219 of your investments so far.")).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Buy more' }))
     expect(decide).toHaveBeenCalledWith({ kind: 'crash', at: 50, choice: 'buyMore' })
   })
@@ -442,7 +480,25 @@ describe('the crash', () => {
     render(<CrashScreen setup={setupFor(timeline)} timeline={timeline} pending={pending} shown={45} decide={() => {}} />)
     expect(screen.queryByRole('button', { name: 'Hold' })).toBeNull()
     expect(screen.queryByText('Lena')).toBeNull()
-    expect(screen.getByText(/and falling/)).toBeInTheDocument()
+    expect(screen.getByText(/of your investments, and falling\.$/)).toBeInTheDocument()
+    expect(screen.queryByText(/so far/)).toBeNull()
+  })
+
+  test('in German the line says "und es fällt weiter" while falling and "bisher" once the choice is due', () => {
+    const pending = { kind: 'crash', at: 50, drawdown: 0.2 } as const
+    const timeline = timelineAt(50, { cash: 20000, etf: 10000 }, pending, 30)
+    const inGerman = (shown: number) =>
+      render(
+        <LangContext.Provider value={{ lang: 'de', setLang: () => {}, t: (key, params) => t('de', key, params) }}>
+          <CrashScreen setup={setupFor(timeline)} timeline={timeline} pending={pending} shown={shown} decide={() => {}} />
+        </LangContext.Provider>,
+      )
+    const header = () => document.querySelector('header')!.textContent!.replace(/\s/g, ' ')
+    const { unmount } = inGerman(45)
+    expect(header()).toMatch(/▼ \d+ % seit dem Hoch\. Das sind [\d.]+ € deiner Anlagen, und es fällt weiter\./)
+    unmount()
+    inGerman(50)
+    expect(header()).toContain('▼ 20 % seit dem Hoch. Das sind bisher 2.219 € deiner Anlagen.')
   })
 
   test('hold records the choice and the year carries on, showing the total again', async () => {
@@ -489,8 +545,11 @@ describe('the crash', () => {
     expect(screen.getByText(/from the high\. That's €[\d,]+ of your investments, and falling\./)).toBeInTheDocument()
     wait(500 * 4)
     expect(screen.queryByRole('button', { name: 'Hold' })).toBeNull()
+    expect(screen.getByText(/and falling\.$/)).toBeInTheDocument()
     wait(500)
     expect(screen.getByRole('button', { name: 'Hold' })).toBeEnabled()
+    expect(screen.getByText(/from the high\. That's €[\d,]+ of your investments so far\./)).toBeInTheDocument()
+    expect(screen.queryByText(/and falling/)).toBeNull()
   })
 })
 

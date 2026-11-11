@@ -58,14 +58,22 @@ export function YearScreen(p: {
   const { lang, t } = useLang()
   const [save, setSave] = useState(() => Math.round(timeline.dials.saveRate * 100))
   const [split, setSplit] = useState(() => Math.round(timeline.dials.etfShare * 100))
+  // An action that changes the split in force ("Get back in") sets the split dial to it; the save
+  // dial keeps what the player has set, saved or not.
+  const [splitInForce, setSplitInForce] = useState(timeline.dials.etfShare)
+  if (splitInForce !== timeline.dials.etfShare) {
+    setSplitInForce(timeline.dials.etfShare)
+    setSplit(Math.round(timeline.dials.etfShare * 100))
+  }
   const holdingsTitle = useId()
 
-  // When the screen before took the focus with it, "Next year" gets it once the year is drawn. It is
-  // always in sight at the bottom, so the page stays where it is, with the chart in view.
+  // When the screen before, or an action button that went away, took the focus with it, "Next year"
+  // gets it once the year is drawn. It is always in sight at the bottom, so the page stays where it
+  // is, with the chart in view.
   const next = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (!busy && document.activeElement === document.body) next.current?.focus({ preventScroll: true })
-  }, [busy])
+  }, [busy, pending])
 
   // The month on screen: the year end once drawn, the month the chart has reached while drawing.
   const now = timeline.snapshots[Math.min(shown, pending.at)]
