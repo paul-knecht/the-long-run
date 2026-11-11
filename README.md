@@ -43,8 +43,6 @@ the raw data changes.
 - `src/data/market.json`: the market and interest data the game ships with.
 - `data/raw/`: the downloaded source data and its notes (`SOURCE.md`).
 - `scripts/build-data.ts`: turns the raw data into `market.json`.
-- `docs/superpowers/`: the design and the implementation plan the game was built from. You may want
-  to keep these out of the public repository (see step 2 below).
 
 ## The data
 
@@ -100,13 +98,8 @@ publishes the site on every push to `main` (and can be started by hand from the 
 
 1. **Create the repository** on GitHub, empty (no README, licence or .gitignore), under any name.
    On a free account Pages needs the repository to be public.
-2. **Push** the code to its `main` branch. If `docs/superpowers/` should not be public, note that
-   it is part of the very first commit: deleting it in a new commit still publishes it through the
-   history, so push a history that never contained it (for example one fresh commit of the
-   finished game). Otherwise, merge the branch the game was built on (`build/game`) into `main`,
-   add the repository as the remote and push:
+2. **Push** the code to its `main` branch:
    ```sh
-   git switch main && git merge build/game
    git remote add origin https://github.com/<you>/<repository>.git
    git push -u origin main
    ```
