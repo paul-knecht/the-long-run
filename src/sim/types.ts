@@ -11,3 +11,6 @@ export interface MarketSeries {
   meta: { region: 'us' | 'world'; source: string; licence: string; note: string }
   months: MonthData[]
 }
+
+export type Bucket = 'cash' | 'etf' | 'fund' | 'stock'
+export type Holdings = Record<Bucket, number>
