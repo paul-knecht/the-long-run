@@ -526,6 +526,11 @@ button {
   cursor: default;
 }
 
+/* The ring sits inside the 44px slider, so it does not cut through the words above and below. */
+.dial-input:focus-visible {
+  outline-offset: -3px;
+}
+
 .dial-input::-webkit-slider-runnable-track {
   height: 44px;
   border: 0;
@@ -654,7 +659,12 @@ button {
   background: var(--stock);
 }
 
-/* The year's buttons stay in reach at the bottom of a phone screen. */
+/* The year's buttons stay in reach at the bottom of a phone screen. A control that takes the
+   focus is scrolled clear of them (room for up to three buttons), so its ring is never hidden. */
+html:has(.year-foot) {
+  scroll-padding-bottom: 192px;
+}
+
 .year-foot {
   position: sticky;
   bottom: 0;

@@ -244,6 +244,21 @@ describe('the message screen', () => {
     expect(replies[0]).toHaveFocus()
   })
 
+  test('after a reply "Next year" takes the focus without scrolling the chart out of view', async () => {
+    await start(3)
+    await userEvent.click(screen.getByRole('button', { name: /next year/i }))
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus')
+    try {
+      await userEvent.keyboard('{Tab}{Enter}')
+      const next = screen.getByRole('button', { name: /next year/i })
+      expect(next).toHaveFocus()
+      expect(focus.mock.contexts.indexOf(next)).toBeGreaterThanOrEqual(0)
+      expect(focus.mock.calls[focus.mock.contexts.indexOf(next)]).toEqual([{ preventScroll: true }])
+    } finally {
+      focus.mockRestore()
+    }
+  })
+
   test('shows the sender, the text and one reply per choice, then their reaction', async () => {
     await start(3) // Uncle Werner writes at month 12.
     await userEvent.click(screen.getByRole('button', { name: /next year/i }))
@@ -417,6 +432,17 @@ describe('the crash', () => {
     expect(screen.getByText(/You now qualify for our managed fund/)).toBeInTheDocument()
     expect(screen.getByText('Your money')).toBeInTheDocument()
     expect(screen.getByRole('img', { name: 'Your money over the years' })).toBeInTheDocument()
+  })
+
+  test('after the choice the page goes back to its top, where the chart carries on', async () => {
+    await toCrash()
+    const scrollTop = vi.spyOn(document.documentElement, 'scrollTop', 'set')
+    try {
+      await userEvent.click(screen.getByRole('button', { name: 'Hold' }))
+      expect(scrollTop).toHaveBeenCalledWith(0)
+    } finally {
+      scrollTop.mockRestore()
+    }
   })
 
   test('the fall into the takeover is drawn at 500 ms a month, showing the ETF price', () => {

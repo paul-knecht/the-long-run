@@ -62,6 +62,15 @@ export function CrashScreen(p: {
     if (arrived && document.activeElement === document.body) feed.current?.focus()
   }, [arrived])
 
+  // The choices sit below the voices, so the page is scrolled down when one is made; once the
+  // takeover is over, the page goes back to its top, where the chart carries on with the year.
+  useEffect(
+    () => () => {
+      document.documentElement.scrollTop = 0
+    },
+    [],
+  )
+
   return (
     <main className="screen play crash" data-arrived={arrived || undefined}>
       {anyInvested ? (

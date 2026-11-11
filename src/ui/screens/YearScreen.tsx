@@ -60,10 +60,11 @@ export function YearScreen(p: {
   const [split, setSplit] = useState(() => Math.round(timeline.dials.etfShare * 100))
   const holdingsTitle = useId()
 
-  // When the screen before took the focus with it, "Next year" gets it once the year is drawn.
+  // When the screen before took the focus with it, "Next year" gets it once the year is drawn. It is
+  // always in sight at the bottom, so the page stays where it is, with the chart in view.
   const next = useRef<HTMLButtonElement>(null)
   useEffect(() => {
-    if (!busy && document.activeElement === document.body) next.current?.focus()
+    if (!busy && document.activeElement === document.body) next.current?.focus({ preventScroll: true })
   }, [busy])
 
   // The month on screen: the year end once drawn, the month the chart has reached while drawing.

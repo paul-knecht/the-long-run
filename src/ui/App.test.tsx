@@ -68,6 +68,44 @@ test('year 1 shows the age, an empty total and the chart', async () => {
   expect(screen.getByRole('img', { name: 'Your money over the years' })).toBeInTheDocument()
 })
 
+describe('reduced motion', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  /** A system that does or does not ask for reduced motion. */
+  const reduce = (on: boolean) => {
+    const matchMedia = vi.fn((query: string) => ({ matches: on && query === '(prefers-reduced-motion: reduce)', media: query }))
+    vi.stubGlobal('matchMedia', matchMedia)
+    return matchMedia
+  }
+
+  /** Seed 3: Uncle Werner writes once year 1 has been drawn. */
+  const playYear1 = async () => {
+    render(<App seed={3} cooldownMs={0} />)
+    await userEvent.click(screen.getByRole('button', { name: /start/i }))
+    await userEvent.click(screen.getByRole('button', { name: /next year/i }))
+  }
+
+  test('when the system asks for it, a year resolves at once and nothing is marked to animate', async () => {
+    const matchMedia = reduce(true)
+    await playYear1()
+    expect(matchMedia).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)')
+    expect(document.querySelector('.app')).toHaveAttribute('data-instant')
+    expect(screen.getByText('Uncle Werner')).toBeInTheDocument()
+    expect(screen.getAllByTestId('reply')).toHaveLength(2)
+  })
+
+  test('otherwise the year is still being drawn right after "Next year"', async () => {
+    reduce(false)
+    await playYear1()
+    expect(document.querySelector('.app')).not.toHaveAttribute('data-instant')
+    expect(screen.queryByText('Uncle Werner')).toBeNull()
+    expect(screen.queryAllByTestId('reply')).toHaveLength(0)
+    expect(screen.getByText('Year 1 of 20')).toBeInTheDocument()
+  })
+})
+
 describe('Header', () => {
   test('shows the year, the age and the total', () => {
     render(<Header year={3} age={25} total={7960} change={2310} mood="calm" />)
