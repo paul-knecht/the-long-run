@@ -33,3 +33,46 @@ export interface RunSetup {
   stockAlpha: number
   stockNoise: number[] // 240
 }
+
+export type ActionId = 'getBackIn' | 'switchBackToEtf' | 'sellStock'
+export type CrashChoice = 'sell' | 'hold' | 'buyMore'
+export type EventChoice = 'follow' | 'decline' | 'lump' | 'spread' | 'cash' | 'ok'
+
+/** One choice by the player. `at` is the number of completed months when it was taken. */
+export type Decision =
+  | { kind: 'year'; at: number; saveRate: number; etfShare: number }
+  | { kind: 'event'; at: number; event: EventId; choice: EventChoice }
+  | { kind: 'crash'; at: number; choice: CrashChoice }
+  | { kind: 'action'; at: number; action: ActionId }
+
+/** The point where the run waits for the player; null when all 240 months are played. */
+export type Pending =
+  | { kind: 'event'; at: number; event: EventId; billCovered?: boolean }
+  | { kind: 'year'; at: number; actions: ActionId[] }
+  | { kind: 'crash'; at: number; drawdown: number }
+  | null
+
+/** The state after `month` completed months, including every decision taken at that month. */
+export interface Snapshot {
+  month: number
+  holdings: Holdings
+  total: number
+  /** Cumulative ETF index net of its cost, 1 at the start. */
+  index: number
+  /** Monthly net salary of this month. */
+  salary: number
+  emergencyTarget: number
+}
+
+export interface Timeline {
+  /** snapshots[0] is the empty start; one more per completed month. */
+  snapshots: Snapshot[]
+  /** Money entering (+) or leaving (-) from outside, per month; same length as snapshots. */
+  flows: number[]
+  pending: Pending
+  /** The rest of these describe the state at the end of what was simulated. */
+  dials: { saveRate: number; etfShare: number }
+  riskyTarget: 'etf' | 'fund'
+  parked: { amount: number; etfShare: number } | null
+  bill: { fromCash: number; sold: number; unpaid: number; drawdownAtSale: number } | null
+}
