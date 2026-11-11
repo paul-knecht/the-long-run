@@ -1,17 +1,7 @@
 import { CRASH_EARLIEST_MONTH, CRASH_LATEST_MONTH, CRASH_MIN_DEPTH, CRASH_TRIGGER, ETF_COST, MONTHS, YEARS } from './constants'
-import type { MarketSeries, MonthData } from './types'
+import type { CrashEpisode, MarketSeries, MonthData } from './types'
 
-export interface CrashEpisode {
-  /** Month count at which the running peak stood (0 = the starting value). */
-  peakMonth: number
-  /** First month the fall from the peak reached CRASH_TRIGGER, or null if it never did. */
-  triggerMonth: number | null
-  troughMonth: number
-  /** Month the index got back to the peak, or null if the window ended first. */
-  recoveryMonth: number | null
-  /** Deepest fall from the peak, as a fraction (0.35 = down 35%). */
-  depth: number
-}
+export type { CrashEpisode } from './types'
 
 /** Monthly return of the ETF after its yearly cost. */
 export function etfReturn(stock: number): number {

@@ -1,5 +1,3 @@
-import type { CrashEpisode } from './market'
-
 export interface MonthData {
   /** Month as "1871-02". */
   ym: string
@@ -18,6 +16,18 @@ export type Bucket = 'cash' | 'etf' | 'fund' | 'stock'
 export type Holdings = Record<Bucket, number>
 
 export type EventId = 'werner' | 'keller' | 'jonas' | 'bill' | 'raise' | 'windfall'
+
+export interface CrashEpisode {
+  /** Month count at which the running peak stood (0 = the starting value). */
+  peakMonth: number
+  /** First month the fall from the peak reached CRASH_TRIGGER, or null if it never did. */
+  triggerMonth: number | null
+  troughMonth: number
+  /** Month the index got back to the peak, or null if the window ended first. */
+  recoveryMonth: number | null
+  /** Deepest fall from the peak, as a fraction (0.35 = down 35%). */
+  depth: number
+}
 
 /** Everything about one playthrough that is fixed before the player makes a choice. */
 export interface RunSetup {

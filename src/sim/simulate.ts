@@ -26,7 +26,7 @@ const AUTO_EVENT_CHOICE: Record<EventId, EventChoice> = {
 const AUTO_CRASH_CHOICE: CrashChoice = 'hold'
 
 /** Two decisions with the same key are the same choice; the first one in the log counts. */
-function decisionKey(d: Decision): string {
+export function decisionKey(d: Decision): string {
   switch (d.kind) {
     case 'year':
       return `year:${d.at}`
@@ -99,12 +99,16 @@ export function simulate(
     bill: bill && { ...bill },
   })
 
-  /** Moves the ETF and the fund to cash and remembers the split to return to (the first one, if already parked). */
+  /**
+   * Moves the ETF and the fund to cash and remembers the split to return to (the first one, if already
+   * parked). A windfall still being spread stops; what is left of it stays in cash.
+   */
   const park = (): void => {
     const amount = holdings.etf + holdings.fund
     holdings = move(move(holdings, 'etf', 'cash', holdings.etf), 'fund', 'cash', holdings.fund)
     parked = { amount: (parked?.amount ?? 0) + amount, etfShare: parked ? parked.etfShare : dials.etfShare }
     dials = { ...dials, etfShare: 0 }
+    spreadLeft = 0
   }
 
   const applyEvent = (event: EventId, choice: EventChoice, at: number): void => {

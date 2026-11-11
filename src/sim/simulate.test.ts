@@ -3,7 +3,7 @@ import { CRASH_TRIGGER, EMERGENCY_MONTHS, FUND_ENTRY_FEE, MAX_SAVE_RATE, START_D
 import { etfReturn } from './market'
 import { total } from './portfolio'
 import { createSetup } from './setup'
-import { simulate } from './simulate'
+import { decisionKey, simulate } from './simulate'
 import { yearly } from './testHelpers'
 import type { ActionId, CrashChoice, Decision, EventChoice, EventId, RunSetup } from './types'
 
@@ -148,6 +148,11 @@ test('auto mode fills in each missing decision with its default', () => {
   expect(simulate(setup, [], 'auto')).toEqual(played)
   // A missing year keeps the dials in force.
   expect(simulate(setup, [year(0, 0.2, 0.3)], 'auto')).toEqual(simulate(setup, yearly(20, 0.2, 0.3), 'auto'))
+})
+
+test('a decision’s key names its kind, month and, for events and actions, which one', () => {
+  const log = [year(24, 0.1, 0.5), ev('keller', 'follow'), crash(30, 'sell'), act(36, 'getBackIn')]
+  expect(log.map(decisionKey)).toEqual(['year:24', 'event:24:keller', 'crash:30', 'action:36:getBackIn'])
 })
 
 test('decisions are found by key: order does not matter, the first of a key wins, strays are ignored', () => {
@@ -339,6 +344,16 @@ test('the windfall goes in at once, over twelve months, or stays in cash', () =>
 
   const intoFund = simulate(s, [...base, ev('keller', 'follow'), ev('windfall', 'lump')], 'auto')
   expect(intoFund.snapshots[at].holdings.fund).toBeCloseTo(WINDFALL * (1 - FUND_ENTRY_FEE))
+})
+
+test('selling cancels a running windfall spread; the rest stays in cash', () => {
+  const sale = Q.windfall + 3
+  const log = [...yearly(20, 0, 0), ev('windfall', 'spread'), crash(sale, 'sell')]
+  const t = simulate(quiet({ takeovers: [sale] }), log, 'auto')
+  expect(t.snapshots[sale].holdings.etf).toBe(0)
+  for (let m = sale + 1; m <= Q.windfall + 12; m++) {
+    expect(t.snapshots[m].holdings).toMatchObject({ etf: 0, cash: t.snapshots[sale].holdings.cash })
+  }
 })
 
 test('the bill is paid from cash first and sells shares only for what cash cannot cover', () => {
