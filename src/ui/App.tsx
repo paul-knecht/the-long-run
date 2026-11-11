@@ -1,35 +1,25 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type JSX } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import { market } from '../data'
-import { type Key, type Lang, detectLang, t as translate } from '../i18n'
+import { type Lang, detectLang, t as translate } from '../i18n'
 import { MONTHS, START_AGE } from '../sim/constants'
 import { createSetup } from '../sim/setup'
 import { decisionKey, simulate } from '../sim/simulate'
-import type { Decision, Pending, Timeline } from '../sim/types'
+import type { Decision, Timeline } from '../sim/types'
 import { Chart } from './components/Chart'
 import { Header } from './components/Header'
+import { LangContext, type LangContextValue } from './lang'
+import { CrashScreen } from './screens/CrashScreen'
+import { MessageScreen, Reaction } from './screens/MessageScreen'
 import { StartScreen } from './screens/StartScreen'
+import { YearScreen } from './screens/YearScreen'
+import { FALL_MS, MONTH_MS, fallStart, useReveal, yearOnScreen } from './useReveal'
 
 type Phase = 'start' | 'play' | 'ending' | 'practice'
 type Mood = 'calm' | 'crash'
+type EventDecision = Extract<Decision, { kind: 'event' }>
 
-interface LangContextValue {
-  lang: Lang
-  setLang(l: Lang): void
-  t(key: Key, params?: Record<string, string | number>): string
-}
-
-/** English with a switch that does nothing, so a screen rendered on its own (in a test) still has words. */
-const LangContext = createContext<LangContextValue>({
-  lang: 'en',
-  setLang: () => {},
-  t: (key, params) => translate('en', key, params),
-})
-
-/** The current language, a way to change it, and `t` bound to it. */
-// oxlint-disable-next-line react/only-export-components -- the plan puts useLang next to App; Fast Refresh reloads this file fully
-export function useLang(): LangContextValue {
-  return useContext(LangContext)
-}
+// oxlint-disable-next-line react/only-export-components -- the plan promised useLang from App; it lives in ./lang
+export { useLang } from './lang'
 
 const randomSeed = (): number => Math.floor(Math.random() * 2 ** 32)
 
@@ -53,10 +43,14 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
 
   const setup = useMemo(() => createSetup(market, seed), [seed])
   const timeline = useMemo(() => simulate(setup, decisions), [setup, decisions])
+  const { pending } = timeline
 
-  // Task 11 animates `shown` up to the newest month (useReveal, honouring `instant`) and is busy meanwhile.
-  const shown = timeline.snapshots.length - 1
-  const busy = false
+  // The chart draws up to the newest month, slowly through a fall that ends in a takeover.
+  const fallFrom = pending?.kind === 'crash' ? fallStart(timeline.snapshots, pending.at) : null
+  const { shown, busy } = useReveal(timeline.snapshots.length - 1, {
+    instant,
+    msPerMonth: (month) => (fallFrom !== null && month > fallFrom ? FALL_MS : MONTH_MS),
+  })
 
   const lastRecordedAt = useRef(-Infinity)
   /** Records a decision unless the chart is still drawing, one was just recorded, or the log already holds it. */
@@ -79,8 +73,13 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
   }
 
   // The ending follows once nothing is pending and the last months have been drawn.
-  const view: Phase = phase === 'play' && timeline.pending === null && !busy ? 'ending' : phase
-  const mood: Mood = view === 'play' && timeline.pending?.kind === 'crash' ? 'crash' : 'calm'
+  const view: Phase = phase === 'play' && pending === null && !busy ? 'ending' : phase
+  // The screen turns once the line starts falling into a takeover.
+  const mood: Mood = view === 'play' && fallFrom !== null && shown > fallFrom ? 'crash' : 'calm'
+  // The pay of the coming month, which the year screen and the raise show.
+  const salary = setup.salary[Math.min(pending?.at ?? 0, MONTHS - 1)]
+  // A reply given at this year boundary, whose sender may answer on the year screen.
+  const reaction = pending?.kind === 'year' ? decisions.find((d): d is EventDecision => d.kind === 'event' && d.at === pending.at) : undefined
 
   const langValue = useMemo<LangContextValue>(
     () => ({ lang, setLang, t: (key, params) => translate(lang, key, params) }),
@@ -95,7 +94,9 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
     <LangContext.Provider value={langValue}>
       <div className="app" data-mood={mood} data-instant={instant || undefined}>
         {view === 'start' && <StartScreen onStart={startRun} />}
-        {view === 'play' && <PlayScreen timeline={timeline} pending={timeline.pending} shown={shown} busy={busy} mood={mood} decide={decide} />}
+        {view === 'play' && (
+          <PlayScreen timeline={timeline} shown={shown} busy={busy} mood={mood} salary={salary} reaction={reaction} decide={decide} />
+        )}
         {(view === 'ending' || view === 'practice') && <div data-testid="ending" />}
       </div>
     </LangContext.Provider>
@@ -104,37 +105,42 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
 
 interface PlayScreenProps {
   timeline: Timeline
-  pending: Pending
   /** Completed months drawn so far. */
   shown: number
   busy: boolean
   mood: Mood
+  /** Monthly pay of the coming month. */
+  salary: number
+  reaction?: EventDecision
   decide(d: Decision): void
 }
 
 /**
- * The seam for the playing screens. Task 11 swaps in YearScreen, MessageScreen and CrashScreen here,
- * chosen by `pending.kind`, and hands them `timeline`, `pending` and `decide`. Until then every stop
- * shows the header and the chart.
+ * The playing screens, chosen by what the run waits for. Once the line falls into a takeover the
+ * crash screen has the whole screen. Otherwise the header and the chart sit on top; below them the
+ * year's choices (disabled while the year is drawn), or a message once the year is drawn.
  */
-function PlayScreen({ timeline, pending, shown, mood }: PlayScreenProps): JSX.Element {
+function PlayScreen({ timeline, shown, busy, mood, salary, reaction, decide }: PlayScreenProps): JSX.Element {
+  const { pending } = timeline
+  if (mood === 'crash' && pending?.kind === 'crash') return <CrashScreen timeline={timeline} pending={pending} shown={shown} decide={decide} />
+
   const year = yearOnScreen(shown, pending)
   // "This year" is the year being drawn, or the one just finished at a year boundary.
   const yearStart = shown === 0 ? 0 : Math.floor((shown - 1) / 12) * 12
   const total = timeline.snapshots[shown].total
+  const { dials } = timeline
   return (
     <main className="screen play">
       <Header year={year} age={START_AGE + year} total={total} change={total - timeline.snapshots[yearStart].total} mood={mood} />
       <Chart series={[{ id: 'you', values: timeline.snapshots.map((s) => s.total), emphasis: 'main' }]} length={MONTHS + 1} shown={shown} mood={mood} />
+      {pending?.kind === 'year' && (
+        <>
+          {reaction && <Reaction event={reaction.event} choice={reaction.choice} />}
+          {/* A new year, or an action that changed the dials in force, starts the dials afresh. */}
+          <YearScreen key={`${pending.at}:${dials.saveRate}:${dials.etfShare}`} timeline={timeline} pending={pending} busy={busy} salary={salary} decide={decide} />
+        </>
+      )}
+      {pending?.kind === 'event' && !busy && <MessageScreen key={pending.at} timeline={timeline} pending={pending} salary={salary} decide={decide} />}
     </main>
   )
-}
-
-/**
- * The year to show after `month` completed months: a stop at a year boundary belongs to the year
- * about to start, any other month to the year being drawn.
- */
-function yearOnScreen(month: number, pending: Pending): number {
-  if (pending && pending.kind !== 'crash' && pending.at === month) return month / 12 + 1
-  return Math.max(1, Math.ceil(month / 12))
 }

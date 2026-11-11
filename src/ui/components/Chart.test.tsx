@@ -77,6 +77,28 @@ test('every series is cut at the same month, and the main one is drawn strongest
   expect(lines.at(-1)!.getAttribute('data-series')).toBe('you')
 })
 
+test('from lossFrom on, the main line is drawn in the loss colour, joined at the high', () => {
+  const { container } = render(
+    <Chart series={[{ id: 'you', values: [0, 10, 20, 15, 12, 30], emphasis: 'main' }]} length={6} shown={4} mood="crash" lossFrom={2} />,
+  )
+  const lines = [...container.querySelectorAll('polyline')]
+  expect(lines.map((l) => [l.getAttribute('data-series'), pointsOf(l).length])).toEqual([
+    ['you', 3],
+    ['you-loss', 3],
+  ])
+  expect(lines[0]).toHaveClass('chart-line--main')
+  expect(lines[1]).toHaveClass('chart-line--loss')
+  expect(pointsOf(lines[1])[0]).toEqual(pointsOf(lines[0])[2])
+  expect(lines[1].getAttribute('stroke-width')).toBe(lines[0].getAttribute('stroke-width'))
+  expect(container.querySelector('.chart-head')).toHaveClass('chart-head--loss')
+})
+
+test('before lossFrom is reached, nothing is drawn in the loss colour', () => {
+  const { container } = render(<Chart series={[{ id: 'you', values: [0, 10, 20, 15], emphasis: 'main' }]} length={4} shown={2} mood="crash" lossFrom={2} />)
+  expect(container.querySelectorAll('polyline')).toHaveLength(1)
+  expect(container.querySelector('.chart-head')).not.toHaveClass('chart-head--loss')
+})
+
 test('the very first month draws without NaN', () => {
   const { container } = render(<Chart series={[{ id: 'you', values: [0, 0, 0], emphasis: 'main' }]} length={3} shown={0} mood="crash" />)
   expect(container.innerHTML).not.toMatch(/NaN|Infinity/)

@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { useLang } from '../App'
+import { useLang } from '../lang'
 
 type Emphasis = 'main' | 'strong' | 'faint'
 
@@ -27,14 +27,16 @@ const round1 = (n: number): string => String(Math.round(n * 10) / 10)
 /**
  * Line chart of one or more series over a run of `length` points. Only values[0..shown] are drawn
  * and only they set the scale, so the blank future gives nothing away. y runs from zero.
+ * With `lossFrom`, the main series is drawn in the loss colour from that point on (the crash).
  */
 export function Chart(props: {
   series: { id: string; values: number[]; emphasis: Emphasis }[]
   length: number
   shown: number
   mood: 'calm' | 'crash'
+  lossFrom?: number
 }): JSX.Element {
-  const { series, length, shown, mood } = props
+  const { series, length, shown, mood, lossFrom } = props
   const { t } = useLang()
   const last = Math.max(0, Math.min(shown, length - 1))
   const visible = [...series]
@@ -46,27 +48,44 @@ export function Chart(props: {
   const y = (v: number): number => HEIGHT - PAD_Y - (v / top) * (HEIGHT - 2 * PAD_Y)
   const main = visible.find((s) => s.emphasis === 'main')
   const head = main && main.values.length > 0 ? { x: x(main.values.length - 1), y: y(main.values[main.values.length - 1]) } : null
+  const losing = lossFrom !== undefined && last > lossFrom
+
+  /** One polyline through values that start at point `from`. */
+  const line = (id: string, values: number[], from: number, className: string, width: number): JSX.Element => (
+    <polyline
+      key={id}
+      className={`chart-line ${className}`}
+      data-series={id}
+      points={values.map((v, i) => `${round1(x(from + i))},${round1(y(v))}`).join(' ')}
+      fill="none"
+      strokeWidth={width}
+      strokeLinejoin="round"
+      strokeLinecap="round"
+      vectorEffect="non-scaling-stroke"
+    />
+  )
 
   return (
     <svg className="chart" data-mood={mood} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="none" role="img" aria-label={t('chart.label')}>
       {last < length - 1 && <rect className="chart-future" x={x(last)} y={0} width={WIDTH - x(last)} height={HEIGHT} />}
       <line className="chart-baseline" x1={0} x2={WIDTH} y1={y(0)} y2={y(0)} vectorEffect="non-scaling-stroke" />
-      {visible.map((s) => (
-        <polyline
-          key={s.id}
-          className={`chart-line chart-line--${s.emphasis}`}
-          data-series={s.id}
-          points={s.values.map((v, i) => `${round1(x(i))},${round1(y(v))}`).join(' ')}
-          fill="none"
-          strokeWidth={STROKE[s.emphasis]}
-          strokeLinejoin="round"
+      {visible.flatMap((s) =>
+        s === main && losing
+          ? [
+              line(s.id, s.values.slice(0, lossFrom + 1), 0, `chart-line--${s.emphasis}`, STROKE[s.emphasis]),
+              line(`${s.id}-loss`, s.values.slice(lossFrom), lossFrom, 'chart-line--loss', STROKE[s.emphasis]),
+            ]
+          : [line(s.id, s.values, 0, `chart-line--${s.emphasis}`, STROKE[s.emphasis])],
+      )}
+      {head && (
+        // A zero-length stroke with round caps: a dot that stays round when the SVG is stretched.
+        <path
+          className={losing ? 'chart-head chart-head--loss' : 'chart-head'}
+          d={`M${round1(head.x)} ${round1(head.y)}h0`}
+          strokeWidth={9}
           strokeLinecap="round"
           vectorEffect="non-scaling-stroke"
         />
-      ))}
-      {head && (
-        // A zero-length stroke with round caps: a dot that stays round when the SVG is stretched.
-        <path className="chart-head" d={`M${round1(head.x)} ${round1(head.y)}h0`} strokeWidth={9} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
       )}
     </svg>
   )

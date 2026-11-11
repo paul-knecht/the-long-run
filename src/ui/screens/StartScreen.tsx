@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import { money } from '../../i18n'
 import { START_AGE, START_SALARY } from '../../sim/constants'
-import { useLang } from '../App'
+import { useLang } from '../lang'
 import { LanguageSwitch } from '../components/Header'
 
 /** Title, a short pitch, the language switch and the start button. Says nothing about which market or years. */

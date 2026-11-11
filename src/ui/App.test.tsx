@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { App } from './App'
 import { Header } from './components/Header'
@@ -63,7 +63,8 @@ test('year 1 shows the age, an empty total and the chart', async () => {
   render(<App seed={3} instant cooldownMs={0} />); await userEvent.click(screen.getByRole('button', { name: /start/i }))
   expect(screen.getByText('Year 1 of 20')).toBeInTheDocument()
   expect(screen.getByText('Age 23')).toBeInTheDocument()
-  expect(screen.getByText('€0')).toBeInTheDocument()
+  // The year screen lists €0 in each account too, so look in the header.
+  expect(within(document.querySelector('header')!).getByText('€0')).toBeInTheDocument()
   expect(screen.getByRole('img', { name: 'Your money over the years' })).toBeInTheDocument()
 })
 
