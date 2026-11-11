@@ -1,10 +1,11 @@
 import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { market } from '../data'
+import { money, percent } from '../i18n'
 import { START_DIALS } from '../sim/constants'
 import { createSetup } from '../sim/setup'
 import { simulate } from '../sim/simulate'
-import type { Holdings, Pending, Snapshot, Timeline } from '../sim/types'
+import type { Decision, Holdings, Pending, Snapshot, Timeline } from '../sim/types'
 import { App, useLang as useLangFromApp } from './App'
 import { Dial } from './components/Dial'
 import { useLang } from './lang'
@@ -20,9 +21,9 @@ afterEach(() => {
 
 const start = async (seed = 3) => { render(<App seed={seed} instant cooldownMs={0} />); await userEvent.click(screen.getByRole('button', { name: /start/i })); };
 test('next year advances twelve months', async () => { await start(); await userEvent.click(screen.getByRole('button', { name: /next year/i })); expect(screen.getByText(/year 2/i)).toBeInTheDocument(); });
-// Seed 25 instead of the brief's 3: seed 3 deals Uncle Werner at month 12 and a crash at month 17, so
-// its second "Next year" is not on screen and year 3 cannot follow two clicks. Seed 25 has neither
-// an event nor a crash in its first two years, which is what this test assumes.
+// Seed 25 instead of the brief's 3: seed 3 deals Uncle Werner at month 12, so its second "Next year"
+// is not on screen. Seed 25 has neither an event nor a crash in its first two years, which is what
+// this test assumes.
 test('double tap records one decision', () => {                   // Review Focus 3
   vi.useFakeTimers(); render(<App seed={25} instant />);            // default cooldown
   fireEvent.click(screen.getByRole('button', { name: /start/i })); act(() => { vi.advanceTimersByTime(500); });
@@ -41,6 +42,7 @@ test('a whole run can be played to the ending', async () => {
 });
 test('messages carry no verdicts', async () => {
   await start(5); for (let i = 0; i < 8; i++) { const r = screen.queryAllByTestId('reply'); if (r.length) break; await userEvent.click(screen.getByRole('button', { name: /next year/i })); }
+  expect(screen.getByText(/You now qualify for our managed fund/)).toBeInTheDocument(); // added: seed 5 reaches Mr. Keller's message in year 3
   expect(document.body.textContent).not.toMatch(/mistake|wrong|good choice|well done/i);
 });
 
@@ -205,9 +207,43 @@ describe('the year screen', () => {
     wait(150)
     expect(screen.getByText('Year 3 of 20')).toBeInTheDocument()
   })
+
+  test('while the year is drawn, the panels follow the chart instead of showing the year end', () => {
+    vi.useFakeTimers()
+    render(<App seed={25} cooldownMs={0} />)
+    fireEvent.click(screen.getByRole('button', { name: /start/i }))
+    fireEvent.change(save(), { target: { value: '30' } })
+    fireEvent.change(split(), { target: { value: '0' } })
+    fireEvent.click(screen.getByRole('button', { name: /next year/i }))
+    const timeline = simulate(createSetup(market, 25), [{ kind: 'year', at: 0, saveRate: 0.3, etfShare: 0 }])
+    const cashAt = (m: number): string => money(timeline.snapshots[m].holdings.cash, 'en')
+    wait(150 * 6)
+    // Half way: six months of €660 is 1.8 months of a €2,200 salary.
+    expect(within(holdings()).getByText(cashAt(6))).toBeInTheDocument()
+    expect(screen.getByText('1.8 of 3 months')).toBeInTheDocument()
+    expect(screen.getByText('€2,200 / month')).toBeInTheDocument()
+    expect(within(holdings()).queryByText(cashAt(12))).toBeNull()
+    expect(screen.queryByText('3 of 3 months')).toBeNull()
+    wait(150 * 6)
+    // Drawn: the year end, and the pay of the year ahead.
+    expect(within(holdings()).getByText(cashAt(12))).toBeInTheDocument()
+    expect(screen.getByText('3 of 3 months')).toBeInTheDocument()
+    expect(screen.getByText('€2,266 / month')).toBeInTheDocument()
+  })
 })
 
 describe('the message screen', () => {
+  test('takes the focus on a neutral spot, one Tab from the first reply', async () => {
+    await start(3)
+    await userEvent.click(screen.getByRole('button', { name: /next year/i }))
+    const replies = screen.getAllByTestId('reply')
+    expect(document.activeElement).not.toBe(document.body)
+    expect(document.activeElement!.closest('.message')).not.toBeNull()
+    expect(replies).not.toContain(document.activeElement)
+    await userEvent.tab()
+    expect(replies[0]).toHaveFocus()
+  })
+
   test('shows the sender, the text and one reply per choice, then their reaction', async () => {
     await start(3) // Uncle Werner writes at month 12.
     await userEvent.click(screen.getByRole('button', { name: /next year/i }))
@@ -260,19 +296,27 @@ describe('the message screen', () => {
 })
 
 describe('the crash', () => {
-  /** Seed 5: the market falls from the very start and takes over at month 17, in year 2. */
-  const toCrash = async (): Promise<HTMLElement> => {
-    await start(5)
-    await userEvent.click(screen.getByRole('button', { name: /next year/i }))
-    await userEvent.click(screen.getByRole('button', { name: /next year/i }))
+  /** Seed 56: Uncle Werner writes at month 24; the market peaks at month 37 and takes over at month 43, in year 4. */
+  const SEED = 56
+  const crashSetup = createSetup(market, SEED)
+  const takeover = crashSetup.episodes.find((e) => e.triggerMonth === crashSetup.takeovers[0])!
+
+  /** Plays to the first takeover, turning everyone down; `etfShare` (percent) is set on year 1 and kept. */
+  const toCrash = async (etfShare?: number): Promise<HTMLElement> => {
+    await start(SEED)
+    if (etfShare !== undefined) fireEvent.change(split(), { target: { value: String(etfShare) } })
+    await playUntil(() => screen.queryByRole('button', { name: 'Hold' }) !== null, (labels) => labels.length - 1)
     return document.querySelector('.app') as HTMLElement
   }
 
-  test('takes over: the fall, a headline, three voices, then the choices', async () => {
+  test('seed 56 takes over in year 4, six months after a high', () => {
+    expect(takeover).toMatchObject({ peakMonth: 37, triggerMonth: 43 })
+  })
+
+  test('takes over: the ETF price, the fall, a headline, three voices, then the choices', async () => {
     const app = await toCrash()
     expect(app).toHaveAttribute('data-mood', 'crash')
-    expect(screen.getByText('Year 2 of 20')).toBeInTheDocument()
-    expect(screen.getByText(/^▼ €[\d,]+ \(-\d+%\) and falling$/)).toBeInTheDocument()
+    expect(screen.getByText('Year 4 of 20')).toBeInTheDocument()
     expect(screen.getByText(/Billions wiped out|Panic selling|Get out while you still can|Savers flee/)).toBeInTheDocument()
     expect(screen.getByText("Told you. CASINO. Get out now, before it's all gone.")).toBeInTheDocument()
     expect(screen.getByText(/May I suggest something a little safer/)).toBeInTheDocument()
@@ -282,7 +326,59 @@ describe('the crash', () => {
     expect(screen.getByRole('button', { name: 'Sell' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Hold' })).toBeEnabled()
     expect(screen.queryByRole('button', { name: /next year/i })).toBeNull()
-    expect(document.querySelector('.chart-line--loss')).not.toBeNull()
+    // The reply test id belongs to the message screen only.
+    expect(screen.queryAllByTestId('reply')).toHaveLength(0)
+  })
+
+  test('the chart shows the ETF price, green to the high and red from it to the takeover', async () => {
+    await toCrash()
+    expect(screen.getByText("The ETF's price")).toBeInTheDocument()
+    const chart = screen.getByRole('img', { name: "The ETF's price" })
+    const points = (series: string): number => chart.querySelector(`[data-series="${series}"]`)!.getAttribute('points')!.trim().split(/\s+/).length
+    expect(points('etf')).toBe(takeover.peakMonth + 1)
+    expect(points('etf-loss')).toBe(takeover.triggerMonth! - takeover.peakMonth + 1)
+    expect(chart.querySelector('[data-series="you"]')).toBeNull()
+  })
+
+  test('the header shows the money invested and what the fall has cost it', async () => {
+    await toCrash()
+    // The same choices through the engine: 10% saved, half to the ETF, Uncle Werner turned down.
+    const at = takeover.triggerMonth!
+    const log: Decision[] = [0, 12, 24, 36].map((m): Decision => ({ kind: 'year', at: m, ...START_DIALS }))
+    log.push({ kind: 'event', at: 24, event: 'werner', choice: 'decline' })
+    const timeline = simulate(crashSetup, log)
+    expect(timeline.pending).toMatchObject({ kind: 'crash', at })
+    const { etf, fund, stock } = timeline.snapshots[at].holdings
+    const invested = etf + fund + stock
+    const pct = timeline.pending?.kind === 'crash' ? timeline.pending.drawdown : NaN
+
+    const header = document.querySelector('header')!
+    expect(within(header).getByText('Your investments')).toBeInTheDocument()
+    expect(within(header).queryByText('Your money')).toBeNull()
+    expect(within(header).getByText(money(invested, 'en'))).toBeInTheDocument()
+    const line = `▼ ${percent(pct, 'en')} from the high. That's ${money((invested * pct) / (1 - pct), 'en')} of your investments, and falling.`
+    expect(within(header).getByText(line)).toBeInTheDocument()
+    expect(line.match(/%/g)).toHaveLength(1)
+    expect(header.textContent).not.toMatch(/\b(18|19|20)\d\d\b/)
+  })
+
+  test('with nothing invested, the header keeps the total and says so', async () => {
+    await toCrash(0)
+    const header = document.querySelector('header')!
+    expect(within(header).getByText('Your money')).toBeInTheDocument()
+    expect(within(header).queryByText('Your investments')).toBeNull()
+    expect(within(header).getByText(/^▼ \d+% from the high\. None of your money is in the market\.$/)).toBeInTheDocument()
+    expect(header.textContent).not.toMatch(/\b(18|19|20)\d\d\b/)
+    expect(screen.getByRole('img', { name: "The ETF's price" })).toBeInTheDocument()
+  })
+
+  test('takes the focus on a neutral spot, one Tab from Sell', async () => {
+    await toCrash()
+    expect(document.activeElement).not.toBe(document.body)
+    expect(document.activeElement!.closest('.crash')).not.toBeNull()
+    expect(document.activeElement!.tagName).not.toBe('BUTTON')
+    await userEvent.tab()
+    expect(screen.getByRole('button', { name: 'Sell' })).toHaveFocus()
   })
 
   test('buy more is disabled, with the reason, when nothing is above the emergency fund', async () => {
@@ -293,11 +389,13 @@ describe('the crash', () => {
 
   test('buy more can be chosen when there is cash above the emergency fund', async () => {
     const decide = vi.fn()
-    const pending = { kind: 'crash', at: 50, drawdown: 0.3 } as const
+    const pending = { kind: 'crash', at: 50, drawdown: 0.2 } as const
+    // The index peaks at month 30 and is 20% down at month 50.
     render(<CrashScreen timeline={timelineAt(50, { cash: 20000, etf: 10000 }, pending, 30)} pending={pending} shown={50} decide={decide} />)
     expect(screen.getByRole('button', { name: 'Buy more' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Buy more' })).toHaveAccessibleDescription('Invest your savings above the emergency fund')
-    expect(screen.getByText(/\(-30%\) and falling/)).toBeInTheDocument()
+    expect(screen.getByText('€10,000')).toBeInTheDocument()
+    expect(screen.getByText("▼ 20% from the high. That's €2,500 of your investments, and falling.")).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Buy more' }))
     expect(decide).toHaveBeenCalledWith({ kind: 'crash', at: 50, choice: 'buyMore' })
   })
@@ -310,27 +408,38 @@ describe('the crash', () => {
     expect(screen.getByText(/and falling/)).toBeInTheDocument()
   })
 
-  test('hold records the choice and the year carries on', async () => {
+  test('hold records the choice and the year carries on, showing the total again', async () => {
     await toCrash()
     await userEvent.click(screen.getByRole('button', { name: 'Hold' }))
-    // The engine plays to the end of year 2, where Mr. Keller is waiting.
+    // The engine plays to the end of year 4, where Mr. Keller is waiting.
     expect(document.querySelector('.app')).toHaveAttribute('data-mood', 'calm')
-    expect(screen.getByText('Year 3 of 20')).toBeInTheDocument()
+    expect(screen.getByText('Year 5 of 20')).toBeInTheDocument()
     expect(screen.getByText(/You now qualify for our managed fund/)).toBeInTheDocument()
+    expect(screen.getByText('Your money')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Your money over the years' })).toBeInTheDocument()
   })
 
-  test('the fall into the takeover is drawn at 500 ms a month', () => {
+  test('the fall into the takeover is drawn at 500 ms a month, showing the ETF price', () => {
     vi.useFakeTimers()
-    render(<App seed={5} cooldownMs={0} />)
+    render(<App seed={SEED} cooldownMs={0} />)
     fireEvent.click(screen.getByRole('button', { name: /start/i }))
+    for (let year = 1; year <= 3; year++) {
+      if (year === 3) fireEvent.click(screen.getByRole('button', { name: "No, I'm keeping my ETF" }))
+      fireEvent.click(screen.getByRole('button', { name: /next year/i }))
+      wait(150 * 12)
+    }
+    expect(screen.getByText('Year 4 of 20')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /next year/i }))
-    wait(150 * 12)
-    expect(screen.getByText('Year 2 of 20')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /next year/i }))
-    // Months 13 to 17 are all part of the fall that began at the start.
+    // Month 37 is the high, drawn at the normal pace; months 38 to 43 fall at 500 ms each.
+    wait(150)
+    expect(document.querySelector('.app')).toHaveAttribute('data-mood', 'calm')
+    expect(screen.getByRole('img', { name: 'Your money over the years' })).toBeInTheDocument()
     wait(500)
     expect(document.querySelector('.app')).toHaveAttribute('data-mood', 'crash')
-    wait(500 * 3)
+    expect(screen.getByRole('img', { name: "The ETF's price" })).toBeInTheDocument()
+    expect(screen.getByText('Your investments')).toBeInTheDocument()
+    expect(screen.getByText(/from the high\. That's €[\d,]+ of your investments, and falling\./)).toBeInTheDocument()
+    wait(500 * 4)
     expect(screen.queryByRole('button', { name: 'Hold' })).toBeNull()
     wait(500)
     expect(screen.getByRole('button', { name: 'Hold' })).toBeEnabled()

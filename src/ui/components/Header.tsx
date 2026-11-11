@@ -25,9 +25,18 @@ export function LanguageSwitch(): JSX.Element {
 /**
  * Year and age, the total, and this year's change with an arrow; plus the language switch.
  * `changeText` replaces the "this year" line (the crash shows the fall instead); `change` still sets its colour.
+ * `totalLabel` replaces "Your money" when the big number is something else (the crash shows the investments).
  */
-export function Header(props: { year: number; age: number; total: number; change: number; mood: 'calm' | 'crash'; changeText?: string }): JSX.Element {
-  const { year, age, total, change, mood, changeText } = props
+export function Header(props: {
+  year: number
+  age: number
+  total: number
+  change: number
+  mood: 'calm' | 'crash'
+  changeText?: string
+  totalLabel?: string
+}): JSX.Element {
+  const { year, age, total, change, mood, changeText, totalLabel } = props
   const { lang, t } = useLang()
   const direction = Math.round(change) > 0 ? 'up' : Math.round(change) < 0 ? 'down' : 'flat'
   return (
@@ -39,7 +48,7 @@ export function Header(props: { year: number; age: number; total: number; change
         </p>
         <LanguageSwitch />
       </div>
-      <p className="header-label">{t('header.total')}</p>
+      <p className="header-label">{totalLabel ?? t('header.total')}</p>
       <p className="header-total">{money(total, lang)}</p>
       <p className="header-change" data-direction={direction}>
         {changeText ?? t('header.change', { amount: signed(change, lang) })}

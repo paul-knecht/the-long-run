@@ -42,17 +42,19 @@ function headlineFor(timeline: Timeline, at: number): Key {
 /**
  * A year's choices: how much to put aside, where new money goes, any action on offer, and "Next
  * year". It also shows the emergency fund, where the money is and, once a year has played, one
- * headline about it. `salary` is the monthly pay of the year ahead. While `busy` (the chart is still
- * drawing) every control is disabled.
+ * headline about it. While `busy` (the chart is still drawing) every control is disabled and the
+ * panels follow the chart: they show month `shown`, not the year end. `salary` is the monthly pay
+ * of the year on screen (the year ahead once it has been drawn).
  */
 export function YearScreen(p: {
   timeline: Timeline
   pending: Extract<Pending, { kind: 'year' }>
+  shown: number
   busy: boolean
   salary: number
   decide(d: Decision): void
 }): JSX.Element {
-  const { timeline, pending, busy, salary, decide } = p
+  const { timeline, pending, shown, busy, salary, decide } = p
   const { lang, t } = useLang()
   const [save, setSave] = useState(() => Math.round(timeline.dials.saveRate * 100))
   const [split, setSplit] = useState(() => Math.round(timeline.dials.etfShare * 100))
@@ -64,7 +66,8 @@ export function YearScreen(p: {
     if (!busy && document.activeElement === document.body) next.current?.focus()
   }, [busy])
 
-  const now = timeline.snapshots[pending.at]
+  // The month on screen: the year end once drawn, the month the chart has reached while drawing.
+  const now = timeline.snapshots[Math.min(shown, pending.at)]
   const { holdings } = now
   const risky = timeline.riskyTarget
   const pct = (whole: number): string => percent(whole / 100, lang)

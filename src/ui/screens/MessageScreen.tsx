@@ -1,4 +1,4 @@
-import type { JSX } from 'react'
+import { type JSX, useEffect, useRef } from 'react'
 import { type Key, money } from '../../i18n'
 import { BILL, WINDFALL } from '../../sim/constants'
 import type { Decision, EventChoice, EventId, Holdings, Pending, Timeline } from '../../sim/types'
@@ -69,6 +69,13 @@ export function MessageScreen(p: {
   const { event, at } = pending
   const script = SCRIPTS[event]
 
+  // When the screen before took the focus with it, the message itself gets it, so one Tab reaches
+  // the first reply and no reply is pre-selected.
+  const message = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (document.activeElement === document.body) message.current?.focus()
+  }, [])
+
   const texts =
     event === 'bill'
       ? [
@@ -84,7 +91,7 @@ export function MessageScreen(p: {
           : [t(script.text)]
 
   return (
-    <section className="message">
+    <section className="message" ref={message} tabIndex={-1}>
       <Appear>
         <ChatBubble from={t(script.from)} texts={texts} />
       </Appear>

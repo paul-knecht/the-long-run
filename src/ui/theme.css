@@ -71,6 +71,11 @@ button {
   outline-offset: 3px;
 }
 
+/* A spot that only takes the focus for the keyboard (tabIndex -1) is not a control: no ring. */
+[tabindex='-1']:focus {
+  outline: none;
+}
+
 /* The mood: the crash turns the whole screen deep red. */
 .app {
   min-height: 100vh;
@@ -311,6 +316,20 @@ button {
 .chart-line--loss,
 .chart-head--loss {
   stroke: var(--loss);
+}
+
+/* Says what the line is when it is not the player's money (the ETF's price in the crash). */
+.chart-caption {
+  max-width: var(--chart-max);
+  margin: 12px auto 0;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chart-caption + .chart {
+  margin-top: 4px;
 }
 
 .chart-line--strong {

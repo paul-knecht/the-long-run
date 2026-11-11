@@ -54,9 +54,15 @@ export function crashEpisodes(etfReturns: number[]): CrashEpisode[] {
   return episodes
 }
 
-/** Trigger months of the episodes deep enough to take over the game. */
+/**
+ * Trigger months of the episodes deep enough to take over the game. None fires before
+ * CRASH_EARLIEST_MONTH: a deep fall in the first years, when the player owns almost nothing,
+ * simply plays out on the chart.
+ */
 export function takeoverMonths(episodes: CrashEpisode[]): number[] {
-  return episodes.flatMap((e) => (e.depth >= CRASH_MIN_DEPTH && e.triggerMonth !== null ? [e.triggerMonth] : []))
+  return episodes.flatMap((e) =>
+    e.depth >= CRASH_MIN_DEPTH && e.triggerMonth !== null && e.triggerMonth >= CRASH_EARLIEST_MONTH ? [e.triggerMonth] : [],
+  )
 }
 
 /** Start years whose window has a takeover crash in [CRASH_EARLIEST_MONTH, CRASH_LATEST_MONTH]. */

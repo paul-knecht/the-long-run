@@ -76,8 +76,9 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
   const view: Phase = phase === 'play' && pending === null && !busy ? 'ending' : phase
   // The screen turns once the line starts falling into a takeover.
   const mood: Mood = view === 'play' && fallFrom !== null && shown > fallFrom ? 'crash' : 'calm'
-  // The pay of the coming month, which the year screen and the raise show.
-  const salary = setup.salary[Math.min(pending?.at ?? 0, MONTHS - 1)]
+  // The pay of the month after the one on screen: the year being drawn, or the year ahead at a stop
+  // (which the year screen and the raise show).
+  const salary = setup.salary[Math.min(shown, MONTHS - 1)]
   // A reply given at this year boundary, whose sender may answer on the year screen.
   const reaction = pending?.kind === 'year' ? decisions.find((d): d is EventDecision => d.kind === 'event' && d.at === pending.at) : undefined
 
@@ -109,7 +110,7 @@ interface PlayScreenProps {
   shown: number
   busy: boolean
   mood: Mood
-  /** Monthly pay of the coming month. */
+  /** Monthly pay of the month after the one on screen. */
   salary: number
   reaction?: EventDecision
   decide(d: Decision): void
@@ -137,7 +138,15 @@ function PlayScreen({ timeline, shown, busy, mood, salary, reaction, decide }: P
         <>
           {reaction && <Reaction event={reaction.event} choice={reaction.choice} />}
           {/* A new year, or an action that changed the dials in force, starts the dials afresh. */}
-          <YearScreen key={`${pending.at}:${dials.saveRate}:${dials.etfShare}`} timeline={timeline} pending={pending} busy={busy} salary={salary} decide={decide} />
+          <YearScreen
+            key={`${pending.at}:${dials.saveRate}:${dials.etfShare}`}
+            timeline={timeline}
+            pending={pending}
+            shown={shown}
+            busy={busy}
+            salary={salary}
+            decide={decide}
+          />
         </>
       )}
       {pending?.kind === 'event' && !busy && <MessageScreen key={pending.at} timeline={timeline} pending={pending} salary={salary} decide={decide} />}

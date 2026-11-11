@@ -94,7 +94,10 @@ export const de: Record<keyof typeof en, string> = {
   'event.windfall.after.cash': 'Aufs Tagesgeld, so mach ich das auch 😊 Ruf mal wieder an.',
 
   // The crash
-  'crash.fall': '{amount} ({pct}) und es geht weiter runter',
+  'crash.fall': '▼ {pct} seit dem Hoch. Das sind {loss} deiner Anlagen, und es fällt weiter.',
+  'crash.fall.none': '▼ {pct} seit dem Hoch. Von deinem Geld liegt nichts an der Börse.',
+  'crash.chartLabel': 'Kurs des ETF',
+  'crash.investedLabel': 'Deine Anlagen',
   'crash.headline.1': 'Milliarden vernichtet. Experten warnen: Das Schlimmste kommt erst noch.',
   'crash.headline.2': 'Panikverkäufe: Börsen im freien Fall.',
   'crash.headline.3': '„Raus, solange es noch geht“, rät Top-Analyst.',

@@ -94,7 +94,10 @@ export const en = {
   'event.windfall.after.cash': "Into savings, that's what I do too 😊 Call me sometime.",
 
   // The crash
-  'crash.fall': '{amount} ({pct}) and falling',
+  'crash.fall': "▼ {pct} from the high. That's {loss} of your investments, and falling.",
+  'crash.fall.none': '▼ {pct} from the high. None of your money is in the market.',
+  'crash.chartLabel': "The ETF's price",
+  'crash.investedLabel': 'Your investments',
   'crash.headline.1': 'Billions wiped out. Experts warn the worst is still to come.',
   'crash.headline.2': 'Panic selling: markets in free fall.',
   'crash.headline.3': '"Get out while you still can," says top analyst.',

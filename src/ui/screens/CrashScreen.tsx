@@ -1,5 +1,5 @@
-import { type JSX, useId } from 'react'
-import { type Key, percent, signed } from '../../i18n'
+import { type JSX, useEffect, useId, useRef } from 'react'
+import { type Key, money, percent } from '../../i18n'
 import { MONTHS, START_AGE } from '../../sim/constants'
 import type { CrashChoice, Decision, Pending, Timeline } from '../../sim/types'
 import { Chart } from '../components/Chart'
@@ -21,10 +21,12 @@ const CHOICES: readonly { choice: CrashChoice; label: Key; hint: Key }[] = [
 ]
 
 /**
- * The takeover: the chart fills the screen in the crash colours, the total ticks down with the fall
- * so far, and once `shown` reaches the takeover month a doom headline and the cast pile in one after
- * another, then Sell / Hold / Buy more. "Buy more" is disabled, with the reason, when the savings
- * account holds nothing above the emergency fund.
+ * The takeover. While the market falls into it, the chart shows the ETF's price (green up to the
+ * high, red after it) and the header shows the money invested, with the fall from the high and what
+ * it has cost that money; with nothing invested the header keeps the total and says so. Once `shown`
+ * reaches the takeover month a doom headline and the cast pile in one after another, then Sell /
+ * Hold / Buy more. "Buy more" is disabled, with the reason, when the savings account holds nothing
+ * above the emergency fund.
  */
 export function CrashScreen(p: {
   timeline: Timeline
@@ -35,30 +37,61 @@ export function CrashScreen(p: {
   const { timeline, pending, shown, decide } = p
   const { lang, t } = useLang()
   const ids = useId()
-  const { snapshots, flows } = timeline
+  const { snapshots } = timeline
 
   const now = Math.min(shown, pending.at)
   const high = fallStart(snapshots, pending.at)
-  const from = Math.min(high, now)
-  // What the market took since the high: the change in the total, less the money paid in or out meanwhile.
-  let paidIn = 0
-  for (let m = from + 1; m <= now; m++) paidIn += flows[m]
-  const lost = Math.min(0, snapshots[now].total - snapshots[from].total - paidIn)
-  const drawdown = now >= pending.at ? pending.drawdown : Math.max(0, 1 - snapshots[now].index / snapshots[high].index)
-  const fall = t('crash.fall', { amount: signed(lost, lang), pct: percent(-drawdown, lang) })
+  // The ETF's fall from its running high at the month on screen (pending.drawdown at the takeover).
+  const fall = Math.max(0, 1 - snapshots[now].index / snapshots[fallStart(snapshots, now)].index)
+  const { holdings } = snapshots[now]
+  const invested = holdings.etf + holdings.fund + holdings.stock
+  const anyInvested = Math.round(invested) > 0
+  // What the fall has cost the money invested: it stood at invested / (1 - fall) at the high.
+  const loss = (invested * fall) / (1 - fall)
+  const pct = percent(fall, lang)
 
   const arrived = shown >= pending.at
   const year = yearOnScreen(now, pending)
   const atTakeover = snapshots[pending.at]
   const canBuyMore = atTakeover.holdings.cash > atTakeover.emergencyTarget
 
+  // When the screen before took the focus with it, a neutral spot above the choices gets it once
+  // they are there, so one Tab reaches Sell and no choice is pre-selected.
+  const feed = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (arrived && document.activeElement === document.body) feed.current?.focus()
+  }, [arrived])
+
   return (
     <main className="screen play crash" data-arrived={arrived || undefined}>
-      <Header year={year} age={START_AGE + year} total={snapshots[now].total} change={lost} changeText={fall} mood="crash" />
-      <Chart series={[{ id: 'you', values: snapshots.map((s) => s.total), emphasis: 'main' }]} length={MONTHS + 1} shown={now} mood="crash" lossFrom={high} />
+      {anyInvested ? (
+        <Header
+          year={year}
+          age={START_AGE + year}
+          total={invested}
+          totalLabel={t('crash.investedLabel')}
+          change={-loss}
+          changeText={t('crash.fall', { pct, loss: money(loss, lang) })}
+          mood="crash"
+        />
+      ) : (
+        // The market is down; the line carries the arrow and the colour of a fall.
+        <Header year={year} age={START_AGE + year} total={snapshots[now].total} change={-1} changeText={t('crash.fall.none', { pct })} mood="crash" />
+      )}
+      <p className="chart-caption" aria-hidden="true">
+        {t('crash.chartLabel')}
+      </p>
+      <Chart
+        series={[{ id: 'etf', values: snapshots.map((s) => s.index), emphasis: 'main' }]}
+        length={MONTHS + 1}
+        shown={now}
+        mood="crash"
+        lossFrom={high}
+        label={t('crash.chartLabel')}
+      />
       {arrived && (
         // One after another: the headline, each voice, then the choices (all at once when instant).
-        <div className="crash-feed">
+        <div className="crash-feed" ref={feed} tabIndex={-1}>
           <Appear>
             <Headline text={t(HEADLINES[pending.at % HEADLINES.length])} />
           </Appear>
@@ -77,7 +110,6 @@ export function CrashScreen(p: {
                   <button
                     type="button"
                     className={c.choice === 'sell' ? 'btn btn-hot' : 'btn'}
-                    data-testid="reply"
                     disabled={disabled}
                     aria-describedby={hintId}
                     onClick={() => decide({ kind: 'crash', at: pending.at, choice: c.choice })}

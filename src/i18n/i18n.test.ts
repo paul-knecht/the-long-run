@@ -122,6 +122,10 @@ const required = [
   'crash.hold',
   'crash.buyMore',
   'crash.buyMore.disabled',
+  'crash.fall',
+  'crash.fall.none',
+  'crash.chartLabel',
+  'crash.investedLabel',
   ...['up', 'flat', 'down'].flatMap((mood) => [1, 2, 3].map((n) => `headline.${mood}.${n}`)),
   'ending.result',
   'ending.reveal.us',
@@ -182,6 +186,8 @@ test('placeholders the screens rely on', () => {
   expect(ph('card.time.history.lost')).toBe('{years}')
   expect(ph('card.lumpSum.history')).toBe('{pct}')
   expect(ph('event.bill.text.sold')).toBe('{amount}')
+  expect(ph('crash.fall')).toBe('{loss},{pct}')
+  expect(ph('crash.fall.none')).toBe('{pct}')
   expect(ph('ending.reveal.us')).toBe('{from},{to}')
   expect(ph('ending.crash.history')).toBe('{total},{wins}')
 })

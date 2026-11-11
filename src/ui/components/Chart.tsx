@@ -28,6 +28,7 @@ const round1 = (n: number): string => String(Math.round(n * 10) / 10)
  * Line chart of one or more series over a run of `length` points. Only values[0..shown] are drawn
  * and only they set the scale, so the blank future gives nothing away. y runs from zero.
  * With `lossFrom`, the main series is drawn in the loss colour from that point on (the crash).
+ * `label` names what the chart shows when it is not the player's money.
  */
 export function Chart(props: {
   series: { id: string; values: number[]; emphasis: Emphasis }[]
@@ -35,8 +36,9 @@ export function Chart(props: {
   shown: number
   mood: 'calm' | 'crash'
   lossFrom?: number
+  label?: string
 }): JSX.Element {
-  const { series, length, shown, mood, lossFrom } = props
+  const { series, length, shown, mood, lossFrom, label } = props
   const { t } = useLang()
   const last = Math.max(0, Math.min(shown, length - 1))
   const visible = [...series]
@@ -66,7 +68,7 @@ export function Chart(props: {
   )
 
   return (
-    <svg className="chart" data-mood={mood} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="none" role="img" aria-label={t('chart.label')}>
+    <svg className="chart" data-mood={mood} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} preserveAspectRatio="none" role="img" aria-label={label ?? t('chart.label')}>
       {last < length - 1 && <rect className="chart-future" x={x(last)} y={0} width={WIDTH - x(last)} height={HEIGHT} />}
       <line className="chart-baseline" x1={0} x2={WIDTH} y1={y(0)} y2={y(0)} vectorEffect="non-scaling-stroke" />
       {visible.flatMap((s) =>

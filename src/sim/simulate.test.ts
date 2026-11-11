@@ -180,13 +180,18 @@ test('year dials are clamped to the dials’ ranges', () => {
 })
 
 test('a takeover waits with the fall from the peak, then the year plays on without a new year decision', () => {
-  // In this run the first takeover falls in year 2 and no event is scheduled at the end of that year.
+  // In this run the first takeover falls mid-year and no event is scheduled at the end of that year.
   const at = setup.takeovers[0]
   const next = Math.ceil(at / 12) * 12
+  expect(at % 12).not.toBe(0)
   expect(Object.values(setup.schedule)).not.toContain(next)
+  // Every event before it is answered, so the run stops nowhere else on the way.
+  const answer: Record<EventId, EventChoice> = { werner: 'decline', keller: 'decline', jonas: 'decline', bill: 'ok', raise: 'ok', windfall: 'lump' }
   const log: Decision[] = [
     ...yearly(next / 12, 0.15, 0.7),
-    { kind: 'event', at: setup.schedule.werner, event: 'werner', choice: 'decline' },
+    ...(Object.entries(setup.schedule) as [EventId, number][])
+      .filter(([, m]) => m < at)
+      .map(([event, m]): Decision => ({ kind: 'event', at: m, event, choice: answer[event] })),
   ]
   const t = simulate(setup, log)
   expect(t.snapshots.length).toBe(at + 1)
