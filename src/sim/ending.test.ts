@@ -1,5 +1,6 @@
 import { market } from '../data'
 import { buildEnding } from './ending'
+import { BILL, WINDFALL } from './constants'
 import { createSetup } from './setup'
 import { simulate } from './simulate'
 import { historyStats } from './stats'
@@ -47,8 +48,24 @@ test("the result is the player's own run, with the money paid in", () => {
   expect(e.you).toEqual(run.snapshots.map((s) => s.total))
   expect(e.final).toBe(run.snapshots[240].total)
   expect(e.paidIn).toBeCloseTo(run.flows.reduce((a, b) => a + b, 0), 6)
-  expect(e.cards.savingsRate.paidIn).toBe(e.paidIn)
   expect(e.lines.map((l) => l.id)).toEqual(['sold', 'etfOnly', 'fundOnly', 'cashOnly'])
+})
+
+test('saved from income counts the monthly savings only; paid in also has the gift and the car bill', () => {
+  // 30% for five years, then 5%: the gift goes in, the bill is paid in full.
+  const log: Decision[] = Array.from({ length: 20 }, (_, i): Decision => ({ kind: 'year', at: 12 * i, saveRate: i < 5 ? 0.3 : 0.05, etfShare: 0.7 }))
+  const e = buildEnding(market, setup, log)
+  const saved = setup.salary.reduce((sum, pay, m) => sum + pay * (m < 60 ? 0.3 : 0.05), 0)
+  expect(e.savedFromIncome).toBeCloseTo(saved, 6)
+  expect(e.cards.savingsRate.savedFromIncome).toBe(e.savedFromIncome)
+  expect(e.cards.emergency.unpaid).toBe(0)
+  expect(e.paidIn).toBeCloseTo(saved + WINDFALL - BILL, 6)
+
+  // Nothing saved and the bill before the gift: it goes unpaid, and only the gift went in.
+  const broke = buildEnding(market, setup, yearly(20, 0, 0.5))
+  expect(broke.savedFromIncome).toBe(0)
+  expect(broke.cards.emergency).toMatchObject({ covered: false, sold: 0, unpaid: BILL })
+  expect(broke.paidIn).toBe(WINDFALL)
 })
 
 test('the reveal names the window and its takeover crashes by peak year', () => {
@@ -69,7 +86,7 @@ test('an all-ETF run falls and recovers with the index, whatever is paid in or t
   expect(e.cards.time.monthsToRecover).toBe(deepest.recoveryMonth! - deepest.troughMonth)
   expect(e.cards.split.yourMaxDrawdown).toBe(e.cards.time.lowestDrawdown)
   expect(e.cards.split.etfOnlyMaxDrawdown).toBe(deepest.depth)
-  expect(e.cards.time.longestLosingYears).toBe(historyStats(market).longestLosingYears)
+  expect(e.cards.time.longestLosingMonths).toBe(historyStats(market).longestLosingMonths)
 })
 
 test('a run that never falls has no low and nothing to recover from', () => {
@@ -233,6 +250,8 @@ test('the stock card measures the stock and the index from the Jonas month to th
   const e = buildEnding(market, setup, log)
   const J = setup.schedule.jonas
   expect(e.cards.stock.followed).toBe(true)
+  expect(e.cards.stock.moved).toBeGreaterThan(0)
+  expect(e.cards.stock.moved).toBe(run.snapshots[J].holdings.stock)
   expect(e.cards.stock.indexMultiple).toBeCloseTo(run.snapshots[240].index / run.snapshots[J].index, 9)
   // The stock bucket is never touched after Jonas in this run (the bill is paid from cash), so it grew by exactly the multiple.
   expect(run.bill?.sold).toBe(0)
@@ -240,8 +259,25 @@ test('the stock card measures the stock and the index from the Jonas month to th
 
   const declined = buildEnding(market, setup, yearly(20, 0.15, 0.7)).cards.stock
   expect(declined.followed).toBe(false)
+  expect(declined.moved).toBe(0)
   expect(declined.stockMultiple).toBe(e.cards.stock.stockMultiple)
   expect(declined.beatInHundred).toBe(e.cards.stock.beatInHundred)
+})
+
+test('the stock card says how much actually went into the stock', () => {
+  const J = setup.schedule.jonas
+  const jonas: Decision = { kind: 'event', at: J, event: 'jonas', choice: 'follow' }
+  // Mr. Keller (month 36) took the whole ETF into his fund, so half of an empty ETF moved.
+  const keller: Decision = { kind: 'event', at: setup.schedule.keller, event: 'keller', choice: 'follow' }
+  expect(setup.schedule.keller).toBeLessThan(J)
+  const empty = buildEnding(market, setup, [...yearly(20, 0.15, 0.7), keller, jonas]).cards.stock
+  expect(empty).toMatchObject({ followed: true, moved: 0 })
+
+  // Selling the stock at the same year boundary does not undo what moved.
+  const plain = buildEnding(market, setup, [...yearly(20, 0.15, 0.7), jonas]).cards.stock
+  const sellAtOnce = buildEnding(market, setup, [...yearly(20, 0.15, 0.7), jonas, { kind: 'action', at: J, action: 'sellStock' }]).cards.stock
+  expect(sellAtOnce.moved).toBe(plain.moved)
+  expect(plain.moved).toBeGreaterThan(0)
 })
 
 test('in 100 lives with the stock, most trail the index', () => {
@@ -258,7 +294,7 @@ test('in 100 lives with the stock, most trail the index', () => {
 
 test('the emergency card reports how the bill was paid', () => {
   const covered = buildEnding(market, setup, yearly(20, 0.15, 0.7)).cards.emergency
-  expect(covered).toEqual({ covered: true, sold: 0, drawdownAtSale: 0 })
+  expect(covered).toEqual({ covered: true, sold: 0, unpaid: 0, drawdownAtSale: 0 })
 
   const log = yearly(20, 0.15, 1) // no cash at all: the bill sells ETF
   const run = simulate(setup, log, 'auto')

@@ -132,7 +132,8 @@ export const en = {
   // The ending
   'ending.title': 'Your {years} years',
   'ending.result': 'You finished with {amount}.',
-  'ending.paidIn': 'You paid in {amount} along the way.',
+  'ending.paidIn': 'Along the way {paidIn} went in: your savings and the gift, less the car bill.',
+  'ending.paidIn.unpaid': 'Along the way {paidIn} went in: your savings and the gift, less what you could pay of the car bill.',
   'ending.lines': "Your path and the ones you didn't take",
   'ending.line.you': 'You',
   'ending.line.held': 'If you had held',
@@ -168,7 +169,8 @@ export const en = {
   'card.time.you.noFall': 'Your money never fell, because little or none of it was in the stock market.',
   'card.time.other': 'Money you need within a few years can get caught by a crash with no time to recover. Money that can wait has time on its side.',
   'card.time.history.never15': "In all the years this game knows, anyone who invested and held for 15 years or more ended ahead. That's history, not a guarantee.",
-  'card.time.history.lost': "In all the years this game knows, the longest hold that still ended in a loss was {years} years; every longer hold ended ahead. That's history, not a guarantee.",
+  'card.time.history.lost': "In all the years this game knows, some holds of more than {lostYears} years still ended in a loss; every hold of {safeYears} years or more ended ahead. That's history, not a guarantee.",
+  'card.time.history.lostExact': "In all the years this game knows, some holds of {lostYears} years still ended in a loss; every hold of {safeYears} years or more ended ahead. That's history, not a guarantee.",
 
   'card.lumpSum.title': 'All at once or bit by bit',
   'card.lumpSum.you.lump': "You invested Grandma's money all at once.",
@@ -178,7 +180,7 @@ export const en = {
   'card.lumpSum.history': 'In all the years this game knows, investing at once beat spreading over 12 months in {pct} of start dates: usually, but not every time. Spreading out is easier on the nerves, and a savings plan does exactly that.',
 
   'card.savingsRate.title': 'How much you put aside',
-  'card.savingsRate.you': 'On average you put aside {rate} of your income. In total, {paidIn} went in.',
+  'card.savingsRate.you': 'On average you put aside {rate} of your income: {saved} in total.',
   'card.savingsRate.other': 'At 15% every year, the same run ends at {at15}.',
   'card.savingsRate.history': "Aim to put 10 to 20% of your income aside every month. It's the part you control, whatever the market does.",
 
@@ -195,6 +197,7 @@ export const en = {
 
   'card.stock.title': 'One stock or a thousand',
   'card.stock.you.followed': "You put half your ETF into Jonas's stock.",
+  'card.stock.you.followedEmpty': 'You said yes to Jonas, but there was nothing in your ETF to move.',
   'card.stock.you.declined': "You passed on Jonas's stock.",
   'card.stock.other': "From Jonas's tip to the end, €100 in his stock became {stock}, and €100 in the ETF became {etf}.",
   'card.stock.history': 'We replayed your years with 100 stocks like his, and {beat} of them beat the ETF. A few single stocks win big, most trail the market, and a worldwide ETF holds more than a thousand.',
@@ -267,6 +270,7 @@ export const en = {
   'smallprint.data': 'The history is the US stock market with dividends reinvested, in US dollars shown as euros; exchange rates are not modelled. A worldwide ETF spreads the same idea across many more countries.',
   'smallprint.savings': 'The savings account pays an approximate rate: the US long-term interest rate of the same month minus one percentage point, never below zero.',
   'smallprint.monthly': 'Prices are monthly averages, so the sharpest days are smoothed out.',
+  'smallprint.crash': 'Every stretch of history in this game was chosen to contain at least one serious crash.',
   'smallprint.costs': "In this game the ETF costs 0.2% a year; Mr. Keller's fund takes 5% of money going in and 1.8% a year.",
   'smallprint.credit': 'Market data: Robert Shiller, via DataHub.',
 } as const

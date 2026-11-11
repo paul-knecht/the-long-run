@@ -132,7 +132,8 @@ export const de: Record<keyof typeof en, string> = {
   // The ending
   'ending.title': 'Deine {years} Jahre',
   'ending.result': 'Am Ende hast du {amount}.',
-  'ending.paidIn': 'Eingezahlt hast du insgesamt {amount}.',
+  'ending.paidIn': 'Unterwegs kamen {paidIn} hinein: dein Erspartes und das Geschenk, abzüglich der Autorechnung.',
+  'ending.paidIn.unpaid': 'Unterwegs kamen {paidIn} hinein: dein Erspartes und das Geschenk, abzüglich dessen, was du von der Autorechnung zahlen konntest.',
   'ending.lines': 'Dein Weg und die, die du nicht gegangen bist',
   'ending.line.you': 'Du',
   'ending.line.held': 'Wenn du gehalten hättest',
@@ -168,7 +169,8 @@ export const de: Record<keyof typeof en, string> = {
   'card.time.you.noFall': 'Dein Geld ist nie gefallen, weil wenig oder nichts davon an der Börse lag.',
   'card.time.other': 'Geld, das du in ein paar Jahren brauchst, kann ein Crash erwischen, ohne dass Zeit zum Erholen bleibt. Geld, das warten kann, hat die Zeit auf seiner Seite.',
   'card.time.history.never15': 'In allen Jahren, die dieses Spiel kennt, hat jeder, der 15 Jahre oder länger investiert blieb, im Plus geendet. Das ist Geschichte, keine Garantie.',
-  'card.time.history.lost': 'In allen Jahren, die dieses Spiel kennt, war die längste Haltedauer, die noch mit Verlust endete, {years} Jahre; jede längere endete im Plus. Das ist Geschichte, keine Garantie.',
+  'card.time.history.lost': 'In allen Jahren, die dieses Spiel kennt, endeten manche Haltedauern von mehr als {lostYears} Jahren noch mit Verlust; jede Haltedauer von {safeYears} Jahren oder mehr endete im Plus. Das ist Geschichte, keine Garantie.',
+  'card.time.history.lostExact': 'In allen Jahren, die dieses Spiel kennt, endeten manche Haltedauern von {lostYears} Jahren noch mit Verlust; jede Haltedauer von {safeYears} Jahren oder mehr endete im Plus. Das ist Geschichte, keine Garantie.',
 
   'card.lumpSum.title': 'Alles auf einmal oder nach und nach',
   'card.lumpSum.you.lump': 'Du hast Omas Geld auf einmal investiert.',
@@ -178,13 +180,13 @@ export const de: Record<keyof typeof en, string> = {
   'card.lumpSum.history': 'In allen Jahren, die dieses Spiel kennt, lag die Einmalanlage in {pct} aller Startmonate vor dem Verteilen über 12 Monate: meistens also, aber nicht jedes Mal. Verteilen schont die Nerven, und ein Sparplan macht genau das.',
 
   'card.savingsRate.title': 'Wie viel du zurücklegst',
-  'card.savingsRate.you': 'Im Schnitt hast du {rate} deines Einkommens zurückgelegt. Insgesamt hast du {paidIn} eingezahlt.',
+  'card.savingsRate.you': 'Im Schnitt hast du {rate} deines Einkommens zurückgelegt: insgesamt {saved}.',
   'card.savingsRate.other': 'Mit 15 % in jedem Jahr endet dasselbe Spiel bei {at15}.',
   'card.savingsRate.history': 'Peil 10 bis 20 % deines Einkommens an, jeden Monat. Das ist der Teil, den du in der Hand hast, egal was die Börse macht.',
 
   'card.split.title': 'Risiko ist eine Aufteilung',
   'card.split.you': 'Im Schnitt ging {share} deines neuen Geldes an die Börse. Dein tiefster Absturz: {yourDrop}.',
-  'card.split.other': 'Alles im ETF: zwischendurch bis zu {etfDrop} im Minus, am Ende {etfFinal}. Alles auf dem Tagesgeld: kein Absturz, am Ende {cashFinal}.',
+  'card.split.other': 'Alles im ETF: zwischenzeitlich bis zu {etfDrop} unter dem Hoch, am Ende {etfFinal}. Alles auf dem Tagesgeld: kein Absturz, am Ende {cashFinal}.',
   'card.split.history': 'Dein Risiko stellst du über diese Aufteilung ein, nicht über cleverere Produkte. Mehr Tagesgeld heißt kleinere Abstürze und langsameres Wachstum.',
 
   'card.costs.title': 'Was Kosten ausmachen',
@@ -195,6 +197,7 @@ export const de: Record<keyof typeof en, string> = {
 
   'card.stock.title': 'Eine Aktie oder tausend',
   'card.stock.you.followed': "Du hast die Hälfte deines ETFs in Jonas' Aktie gesteckt.",
+  'card.stock.you.followedEmpty': 'Du hast Jonas zugesagt, aber in deinem ETF lag nichts, das du hättest umschichten können.',
   'card.stock.you.declined': "Du hast Jonas' Tipp ausgelassen.",
   'card.stock.other': "Von Jonas' Tipp bis zum Ende wurden aus 100 € in seiner Aktie {stock} und aus 100 € im ETF {etf}.",
   'card.stock.history': 'Wir haben deine Jahre mit 100 Aktien wie seiner nachgespielt: {beat} davon schlugen den ETF. Ein paar Einzelaktien hängen den Markt weit ab, die meisten bleiben hinter ihm zurück, und ein weltweiter ETF hält über tausend.',
@@ -267,6 +270,7 @@ export const de: Record<keyof typeof en, string> = {
   'smallprint.data': 'Die Kurse stammen vom US-Aktienmarkt, mit wieder angelegten Dividenden, in US-Dollar und als Euro angezeigt; Wechselkurse sind nicht berücksichtigt. Ein weltweiter ETF verteilt dieselbe Idee auf viel mehr Länder.',
   'smallprint.savings': 'Das Tagesgeld bekommt näherungsweise den langfristigen US-Zins desselben Monats minus einen Prozentpunkt, nie weniger als null.',
   'smallprint.monthly': 'Die Kurse sind Monatsdurchschnitte, die heftigsten Tage sind darin geglättet.',
+  'smallprint.crash': 'Jeder Abschnitt der Geschichte in diesem Spiel wurde so gewählt, dass er mindestens einen schweren Crash enthält.',
   'smallprint.costs': 'Im Spiel kostet der ETF 0,2 % im Jahr; Herrn Kellers Fonds nimmt 5 % Ausgabeaufschlag und 1,8 % im Jahr.',
   'smallprint.credit': 'Marktdaten: Robert Shiller, über DataHub.',
 }

@@ -9,7 +9,7 @@ export interface Rate {
 
 export interface HistoryStats {
   lump: Rate
-  longestLosingYears: number
+  longestLosingMonths: number
   hold: Rate
 }
 
@@ -39,23 +39,16 @@ export function lumpSumWinRate(series: MarketSeries): Rate {
   return { wins, total }
 }
 
-/** The largest whole number of years N for which some start month ended an N-year ETF hold below where it started; 0 if none. */
-export function longestLosingHold(series: MarketSeries): number {
+/** The longest ETF hold, in whole months, that ended below where it started; 0 if none did. */
+export function longestLosingMonths(series: MarketSeries): number {
   const { months } = series
   const logIndex = [0] // log of the cumulative ETF index, so any hold's log growth is a difference
   for (const m of months) logIndex.push(logIndex[logIndex.length - 1] + Math.log1p(etfReturn(m.stock)))
 
-  let longest = 0
-  for (let years = 1; years * 12 <= months.length; years++) {
-    const length = years * 12
-    for (let i = 0; i + length <= months.length; i++) {
-      if (logIndex[i + length] - logIndex[i] < 0) {
-        longest = years
-        break
-      }
-    }
+  for (let length = months.length; length > 0; length--) {
+    for (let i = 0; i + length <= months.length; i++) if (logIndex[i + length] - logIndex[i] < 0) return length
   }
-  return longest
+  return 0
 }
 
 /**
@@ -85,7 +78,7 @@ const cache = new WeakMap<MarketSeries, HistoryStats>()
 export function historyStats(series: MarketSeries): HistoryStats {
   let stats = cache.get(series)
   if (!stats) {
-    stats = { lump: lumpSumWinRate(series), longestLosingYears: longestLosingHold(series), hold: holdBeatsSellRate(series) }
+    stats = { lump: lumpSumWinRate(series), longestLosingMonths: longestLosingMonths(series), hold: holdBeatsSellRate(series) }
     cache.set(series, stats)
   }
   return stats

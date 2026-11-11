@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { market } from '../data'
 import { type Key, type Lang, money, percent, t } from '../i18n'
+import { de } from '../i18n/de'
 import { en } from '../i18n/en'
 import { buildEnding, type EndingModel } from '../sim/ending'
 import { createSetup } from '../sim/setup'
@@ -87,7 +88,20 @@ test('the result: the 20 years, the age, the final amount and the money paid in'
   expect(screen.getByText('Your 20 years')).toBeInTheDocument()
   expect(screen.getByText('Age 42')).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(`You finished with ${money(model.final, 'en')}.`)
-  expect(screen.getByText(`You paid in ${money(model.paidIn, 'en')} along the way.`)).toBeInTheDocument()
+  expect(screen.getByText(`Along the way ${money(model.paidIn, 'en')} went in: your savings and the gift, less the car bill.`)).toBeInTheDocument()
+})
+
+test('the money paid in says what it is, also when the car bill could not be paid in full', () => {
+  // Nothing saved before the bill, which comes before the gift: none of it was paid.
+  const broke = buildEnding(market, setup, yearly(20, 0, 0.5))
+  expect(broke.cards.emergency.unpaid).toBeGreaterThan(0)
+  const { unmount } = renderEnding(broke)
+  expect(screen.getByText(`Along the way ${money(broke.paidIn, 'en')} went in: your savings and the gift, less what you could pay of the car bill.`)).toBeInTheDocument()
+  unmount()
+  renderEnding(broke, 'de')
+  expect(
+    screen.getByText((_, el) => el?.tagName === 'P' && el.textContent!.replace(/\s/g, ' ') === `Unterwegs kamen ${money(broke.paidIn, 'de').replace(/\s/g, ' ')} hinein: dein Erspartes und das Geschenk, abzüglich dessen, was du von der Autorechnung zahlen konntest.`),
+  ).toBeInTheDocument()
 })
 
 test('the chart draws every path over all 241 months: yours as the main line, the emphasised ones strong, the rest faint', () => {
@@ -163,7 +177,10 @@ test('the cards of an ordinary run: what you did, what the other path gave, and 
 
   const timeCard = card('card.time.title')
   expect(line(timeCard, 'card.label.you')).toBe(`At the worst point the market had knocked 26% off your money. It took ${time.monthsToRecover} months to climb back.`)
-  expect(line(timeCard, 'card.label.history')).toBe(t('en', 'card.time.history.lost', { years: time.longestLosingYears }))
+  expect(time.longestLosingMonths).toBe(183)
+  expect(line(timeCard, 'card.label.history')).toBe(
+    "In all the years this game knows, some holds of more than 15 years still ended in a loss; every hold of 16 years or more ended ahead. That's history, not a guarantee.",
+  )
 
   const lumpCard = card('card.lumpSum.title')
   expect(line(lumpCard, 'card.label.you')).toBe("You invested Grandma's money all at once.")
@@ -171,7 +188,8 @@ test('the cards of an ordinary run: what you did, what the other path gave, and 
   expect(line(lumpCard, 'card.label.history')).toMatch(/^In all the years this game knows, investing at once beat spreading over 12 months in 64% of start dates/)
 
   const savingCard = card('card.savingsRate.title')
-  expect(line(savingCard, 'card.label.you')).toBe(`On average you put aside 15% of your income. In total, ${eur(model.paidIn)} went in.`)
+  expect(line(savingCard, 'card.label.you')).toBe(`On average you put aside 15% of your income: ${eur(model.savedFromIncome)} in total.`)
+  expect(model.savedFromIncome).not.toBeCloseTo(model.paidIn, 0)
   expect(line(savingCard, 'card.label.other')).toBe(`At 15% every year, the same run ends at ${eur(savingsRate.finalAt15)}.`)
 
   const splitCard = card('card.split.title')
@@ -196,10 +214,19 @@ test('the cards of a run that followed every tip, spread the windfall and sold t
   renderEnding(m)
   expect(line(card('card.lumpSum.title'), 'card.label.you')).toBe("You spread Grandma's money over 12 months.")
   expect(line(card('card.costs.title'), 'card.label.you')).toBe("You moved into Mr. Keller's fund: 5% on the way in, 1.8% every year.")
-  expect(line(card('card.stock.title'), 'card.label.you')).toBe("You put half your ETF into Jonas's stock.")
+  // Mr. Keller had already taken the whole ETF into his fund, so nothing was there for Jonas.
+  expect(m.cards.stock).toMatchObject({ followed: true, moved: 0 })
+  expect(line(card('card.stock.title'), 'card.label.you')).toBe("You said yes to Jonas, but there was nothing in your ETF to move.")
   expect(line(card('card.emergency.title'), 'card.label.you')).toBe(
     `When the car bill came, your savings account wasn't enough, so ${money(m.cards.emergency.sold, 'en')} of your investments were sold while the ETF stood ${percent(m.cards.emergency.drawdownAtSale, 'en')} below its high.`,
   )
+})
+
+test('saying yes to Jonas with money in the ETF moves half of it', () => {
+  const m = buildEnding(market, setup, [...yearly(20, 0.15, 0.7), ev('jonas', 'follow')])
+  expect(m.cards.stock.moved).toBeGreaterThan(0)
+  renderEnding(m)
+  expect(line(card('card.stock.title'), 'card.label.you')).toBe("You put half your ETF into Jonas's stock.")
 })
 
 test('a windfall left in the savings account, and a bill with nothing to pay it from', () => {
@@ -229,15 +256,27 @@ test('the time card picks its words from the numbers', () => {
   expect(you({ lowestDrawdown: 0.004, monthsToRecover: 2 })).toBe(en['card.time.you.noFall'])
   expect(you({ lowestDrawdown: 0, monthsToRecover: 0 })).toBe(en['card.time.you.noFall'])
 
-  const history = (longestLosingYears: number): string => {
-    const { unmount } = renderEnding(withTime({ longestLosingYears }))
-    const text = line(card('card.time.title'), 'card.label.history')
+  const history = (longestLosingMonths: number, lang: Lang = 'en'): string => {
+    const { unmount } = renderEnding(withTime({ longestLosingMonths }), lang)
+    // The time card comes first; its third line is the history.
+    const text = screen.getAllByTestId('lesson-card')[0].querySelectorAll('dd')[2].textContent!
     unmount()
     return text
   }
-  expect(history(14)).toBe(en['card.time.history.never15'])
-  expect(history(15)).toBe(t('en', 'card.time.history.lost', { years: 15 }))
-  expect(history(17)).toBe(t('en', 'card.time.history.lost', { years: 17 }))
+  // Under 15 years, no hold of 15 years or more lost.
+  expect(history(0)).toBe(en['card.time.history.never15'])
+  expect(history(179)).toBe(en['card.time.history.never15'])
+  // Exactly 15 years: some 15-year holds lost; nothing longer did.
+  expect(history(180)).toBe(
+    "In all the years this game knows, some holds of 15 years still ended in a loss; every hold of 16 years or more ended ahead. That's history, not a guarantee.",
+  )
+  expect(history(181)).toBe(t('en', 'card.time.history.lost', { lostYears: 15, safeYears: 16 }))
+  expect(history(191)).toBe(t('en', 'card.time.history.lost', { lostYears: 15, safeYears: 16 }))
+  expect(history(192)).toBe(t('en', 'card.time.history.lostExact', { lostYears: 16, safeYears: 17 }))
+  expect(history(205)).toBe(t('en', 'card.time.history.lost', { lostYears: 17, safeYears: 18 }))
+  expect(history(183, 'de')).toBe(
+    'In allen Jahren, die dieses Spiel kennt, endeten manche Haltedauern von mehr als 15 Jahren noch mit Verlust; jede Haltedauer von 16 Jahren oder mehr endete im Plus. Das ist Geschichte, keine Garantie.',
+  )
 })
 
 // Sharing.
@@ -371,7 +410,8 @@ test('"Set up your real plan" leads on to the practice step', async () => {
 test('the small print carries every note', () => {
   renderEnding(model)
   const notes = (Object.keys(en) as Key[]).filter((k) => k.startsWith('smallprint.'))
-  expect(notes.length).toBeGreaterThanOrEqual(9)
+  expect(notes.length).toBeGreaterThanOrEqual(10)
+  expect(screen.getByText('Every stretch of history in this game was chosen to contain at least one serious crash.')).toBeInTheDocument()
   for (const k of notes) expect(screen.getByText(en[k])).toBeInTheDocument()
 })
 
@@ -399,6 +439,15 @@ test('in German', () => {
   expect(screen.getByText('Deine 20 Jahre')).toBeInTheDocument()
   expect(screen.getByText(/am US-Aktienmarkt erlebt/)).toBeInTheDocument()
   expect(screen.getAllByTestId('lesson-card')[6]).toHaveTextContent('Der Notgroschen')
+  expect(plain(screen.getByText(/^Unterwegs kamen/).textContent!)).toBe(
+    plain(`Unterwegs kamen ${money(model.paidIn, 'de')} hinein: dein Erspartes und das Geschenk, abzüglich der Autorechnung.`),
+  )
+  // Below the high, not below what went in.
+  expect(plain(screen.getAllByTestId('lesson-card')[3].textContent!)).toContain('Alles im ETF: zwischenzeitlich bis zu 39 % unter dem Hoch, am Ende')
+  expect(plain(screen.getAllByTestId('lesson-card')[2].textContent!)).toContain(
+    plain(`Im Schnitt hast du 15 % deines Einkommens zurückgelegt: insgesamt ${money(model.savedFromIncome, 'de')}.`),
+  )
+  expect(screen.getByText(de['smallprint.crash'])).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Ergebnis teilen' })).toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Nochmal spielen' })).toBeInTheDocument()
 })

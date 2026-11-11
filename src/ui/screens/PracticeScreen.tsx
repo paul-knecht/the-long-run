@@ -33,6 +33,7 @@ const SMALLPRINT: readonly Key[] = [
   'smallprint.advice',
   'smallprint.past',
   'smallprint.data',
+  'smallprint.crash',
   'smallprint.monthly',
   'smallprint.savings',
   'smallprint.costs',

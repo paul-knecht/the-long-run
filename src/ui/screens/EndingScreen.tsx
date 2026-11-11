@@ -31,6 +31,7 @@ const SMALLPRINT: readonly Key[] = [
   'smallprint.advice',
   'smallprint.past',
   'smallprint.data',
+  'smallprint.crash',
   'smallprint.monthly',
   'smallprint.savings',
   'smallprint.costs',
@@ -50,6 +51,17 @@ interface Lesson {
   history: string
 }
 
+/**
+ * What history says about holding: with no losing hold of 15 years or more, that; otherwise the whole
+ * years of the longest losing hold, and from one year more on, every hold ended ahead.
+ */
+function timeHistory(longestLosingMonths: number, t: T): string {
+  if (longestLosingMonths < REFERENCE_HOLD_YEARS * 12) return t('card.time.history.never15')
+  const lostYears = Math.floor(longestLosingMonths / 12)
+  const years = { lostYears, safeYears: lostYears + 1 }
+  return t(longestLosingMonths % 12 === 0 ? 'card.time.history.lostExact' : 'card.time.history.lost', years)
+}
+
 /** The seven lesson cards, in order, each worded from what the run and the data show. */
 function lessons(cards: EndingModel['cards'], lang: Lang, t: T): Lesson[] {
   const pct = (x: number): string => percent(x, lang)
@@ -64,6 +76,9 @@ function lessons(cards: EndingModel['cards'], lang: Lang, t: T): Lesson[] {
       : time.monthsToRecover === 1
         ? t('card.time.you.fellOne', { drop })
         : t('card.time.you.fell', { drop, months: time.monthsToRecover })
+
+  // Saying yes to Jonas moves half the ETF; with nothing in it, nothing moved.
+  const stockYou: Key = !stock.followed ? 'card.stock.you.declined' : Math.round(stock.moved) > 0 ? 'card.stock.you.followed' : 'card.stock.you.followedEmpty'
 
   const lumpYou: Record<typeof lumpSum.choice, Key> = { lump: 'card.lumpSum.you.lump', spread: 'card.lumpSum.you.spread', cash: 'card.lumpSum.you.cash' }
 
@@ -80,10 +95,7 @@ function lessons(cards: EndingModel['cards'], lang: Lang, t: T): Lesson[] {
       title: t('card.time.title'),
       you: timeYou,
       other: t('card.time.other'),
-      history:
-        time.longestLosingYears < REFERENCE_HOLD_YEARS
-          ? t('card.time.history.never15')
-          : t('card.time.history.lost', { years: time.longestLosingYears }),
+      history: timeHistory(time.longestLosingMonths, t),
     },
     {
       id: 'lumpSum',
@@ -95,7 +107,7 @@ function lessons(cards: EndingModel['cards'], lang: Lang, t: T): Lesson[] {
     {
       id: 'savingsRate',
       title: t('card.savingsRate.title'),
-      you: t('card.savingsRate.you', { rate: pct(savingsRate.averageRate), paidIn: eur(savingsRate.paidIn) }),
+      you: t('card.savingsRate.you', { rate: pct(savingsRate.averageRate), saved: eur(savingsRate.savedFromIncome) }),
       other: t('card.savingsRate.other', { at15: eur(savingsRate.finalAt15) }),
       history: t('card.savingsRate.history'),
     },
@@ -116,7 +128,7 @@ function lessons(cards: EndingModel['cards'], lang: Lang, t: T): Lesson[] {
     {
       id: 'stock',
       title: t('card.stock.title'),
-      you: t(stock.followed ? 'card.stock.you.followed' : 'card.stock.you.declined'),
+      you: t(stockYou),
       other: t('card.stock.other', { stock: eur(100 * stock.stockMultiple), etf: eur(100 * stock.indexMultiple) }),
       history: t('card.stock.history', { beat: stock.beatInHundred }),
     },
@@ -223,7 +235,9 @@ export function EndingScreen(p: { model: EndingModel; onAgain(): void; onPractic
         <span className="ending-total">{money(model.final, lang)}</span>
         {resultEnd}
       </h1>
-      <p className="ending-paid">{t('ending.paidIn', { amount: money(model.paidIn, lang) })}</p>
+      <p className="ending-paid">
+        {t(Math.round(model.cards.emergency.unpaid) > 0 ? 'ending.paidIn.unpaid' : 'ending.paidIn', { paidIn: money(model.paidIn, lang) })}
+      </p>
 
       <h2 id={`${ids}-paths`} className="ending-caption">
         {t('ending.lines')}

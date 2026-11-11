@@ -200,6 +200,7 @@ test('confirming shows the plan in one line, the checklist and the small print, 
   )
   for (const name of ['MSCI World', 'FTSE All-World', 'MSCI ACWI']) expect(screen.getByRole('list', { name: en['practice.done.text'] })).toHaveTextContent(name)
   for (const key of Object.keys(en).filter((k) => k.startsWith('smallprint.'))) expect(screen.getByText(en[key as keyof typeof en])).toBeInTheDocument()
+  expect(screen.getByText('Every stretch of history in this game was chosen to contain at least one serious crash.')).toBeInTheDocument()
 })
 
 test('"Back to the start" calls onDone', async () => {

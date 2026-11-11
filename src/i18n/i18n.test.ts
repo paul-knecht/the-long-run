@@ -141,6 +141,7 @@ const required = [
   'card.time.you.noFall',
   'card.time.history.never15',
   'card.time.history.lost',
+  'card.time.history.lostExact',
   'card.lumpSum.you.lump',
   'card.lumpSum.you.spread',
   'card.lumpSum.you.cash',
@@ -153,6 +154,7 @@ const required = [
   'card.costs.you.declined',
   'card.costs.history',
   'card.stock.you.followed',
+  'card.stock.you.followedEmpty',
   'card.stock.you.declined',
   'card.stock.history',
   'card.emergency.you.covered',
@@ -170,6 +172,9 @@ const required = [
   'smallprint.advice',
   'smallprint.monthly',
   'smallprint.credit',
+  'smallprint.crash',
+  'ending.paidIn',
+  'ending.paidIn.unpaid',
 ]
 
 test('every promised key exists', () => {
@@ -184,13 +189,18 @@ test('placeholders the screens rely on', () => {
   expect(ph('card.time.you.notBack')).toBe('{drop}')
   expect(ph('card.time.you.noFall')).toBe('')
   expect(ph('card.time.history.never15')).toBe('')
-  expect(ph('card.time.history.lost')).toBe('{years}')
+  expect(ph('card.time.history.lost')).toBe('{lostYears},{safeYears}')
+  expect(ph('card.time.history.lostExact')).toBe('{lostYears},{safeYears}')
   expect(ph('card.lumpSum.history')).toBe('{pct}')
   expect(ph('card.emergency.you.sold')).toBe('{drop},{sold}')
   expect(ph('card.emergency.you.unpaid')).toBe('')
   expect(ph('event.bill.text.sold')).toBe('{amount}')
   expect(ph('crash.fall')).toBe('{loss},{pct}')
   expect(ph('crash.fall.none')).toBe('{pct}')
+  expect(ph('ending.paidIn')).toBe('{paidIn}')
+  expect(ph('ending.paidIn.unpaid')).toBe('{paidIn}')
+  expect(ph('card.savingsRate.you')).toBe('{rate},{saved}')
+  expect(ph('card.stock.you.followedEmpty')).toBe('')
   expect(ph('ending.reveal.us')).toBe('{from},{to}')
   expect(ph('ending.crash.history')).toBe('{total},{wins}')
 })
@@ -245,7 +255,7 @@ test('the themed ETF never says world and carries no cost figure', () => {
 test('history is history, and lump sum wins usually', () => {
   expect(en['card.lumpSum.history']).toMatch(/usually/)
   expect(de['card.lumpSum.history']).toMatch(/meistens/)
-  for (const k of ['card.time.history.never15', 'card.time.history.lost'] as const) {
+  for (const k of ['card.time.history.never15', 'card.time.history.lost', 'card.time.history.lostExact'] as const) {
     expect(en[k]).toMatch(/not a guarantee/)
     expect(de[k]).toMatch(/keine Garantie/)
   }
@@ -258,10 +268,10 @@ test('the reveal names the US market, its currency and inflation, and the worldw
 
 test('the small print covers what the brief lists', () => {
   const print = (d: Record<Key, string>) => entries(d).filter(([k]) => k.startsWith('smallprint.')).map(([, v]) => v).join(' ')
-  for (const pattern of [/not investment advice/, /no guarantee/, /not adjusted for inflation/, /US stock market/, /US dollars/, /many more countries/, /Robert Shiller/, /DataHub/]) {
+  for (const pattern of [/not investment advice/, /no guarantee/, /not adjusted for inflation/, /US stock market/, /US dollars/, /many more countries/, /Robert Shiller/, /DataHub/, /chosen to contain at least one serious crash/]) {
     expect(print(en)).toMatch(pattern)
   }
-  for (const pattern of [/keine Anlageberatung/, /keine Garantie/, /nicht inflationsbereinigt/, /US-Aktienmarkt/, /US-Dollar/, /viel mehr Länder/, /Robert Shiller/, /DataHub/]) {
+  for (const pattern of [/keine Anlageberatung/, /keine Garantie/, /nicht inflationsbereinigt/, /US-Aktienmarkt/, /US-Dollar/, /viel mehr Länder/, /Robert Shiller/, /DataHub/, /mindestens einen schweren Crash enthält/]) {
     expect(print(de)).toMatch(pattern)
   }
 })

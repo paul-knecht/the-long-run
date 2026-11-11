@@ -10,16 +10,23 @@ import type { Decision, EventChoice, EventId, MarketSeries, RunSetup, Snapshot, 
 
 export interface EndingModel {
   final: number
+  /** Money from outside, net: the monthly savings and the gift, less what the car bill took. */
   paidIn: number
+  /** The monthly savings from income only. */
+  savedFromIncome: number
   /** The player's total after each month, 0 to 240. */
   you: number[]
   lines: Alternative[]
-  /** crashes: the takeover episodes only, in order. */
+  /**
+   * crashes: every fall of at least CRASH_MIN_DEPTH that reached the trigger within the window, in
+   * order; this includes deep falls before CRASH_EARLIEST_MONTH, which do not take over the game.
+   */
   reveal: { region: 'us' | 'world'; fromYear: number; toYear: number; crashes: { peakYear: number; depth: number }[] }
   cards: {
-    time: { lowestDrawdown: number; monthsToRecover: number | null; longestLosingYears: number }
+    /** longestLosingMonths: across all history, the longest ETF hold in months that ended below where it started. */
+    time: { lowestDrawdown: number; monthsToRecover: number | null; longestLosingMonths: number }
     lumpSum: { choice: 'lump' | 'spread' | 'cash'; lumpFinal: number; spreadFinal: number; winRate: number }
-    savingsRate: { averageRate: number; paidIn: number; finalAt15: number }
+    savingsRate: { averageRate: number; savedFromIncome: number; finalAt15: number }
     split: {
       averageEtfShare: number
       yourMaxDrawdown: number
@@ -28,8 +35,10 @@ export interface EndingModel {
       cashOnlyFinal: number
     }
     costs: { followed: boolean; etfOnlyFinal: number; fundOnlyFinal: number }
-    stock: { followed: boolean; stockMultiple: number; indexMultiple: number; beatInHundred: number }
-    emergency: { covered: boolean; sold: number; drawdownAtSale: number }
+    /** moved: what saying yes to Jonas actually moved into the stock (0 if declined). */
+    stock: { followed: boolean; moved: number; stockMultiple: number; indexMultiple: number; beatInHundred: number }
+    /** unpaid: the part of the car bill nothing was left to pay. */
+    emergency: { covered: boolean; sold: number; unpaid: number; drawdownAtSale: number }
   }
   /** Across every window the game can deal: in how many holding through the first takeover beat selling into cash. */
   crashHistory: { wins: number; total: number }
@@ -129,6 +138,9 @@ export function buildEnding(series: MarketSeries, setup: RunSetup, decisions: De
   const you = run.snapshots.map((s) => s.total)
   const final = you[MONTHS]
   const paidIn = run.flows.reduce((a, b) => a + b, 0)
+  const dials = dialsByYear(decisions)
+  // Month m's savings, as the engine puts them aside: its pay times the save rate of its year.
+  const savedFromIncome = setup.salary.reduce((sum, pay, i) => sum + pay * dials[Math.floor(i / 12)].saveRate, 0)
   const lines = alternatives(setup, decisions)
   const lineFinal = (id: Alternative['id']): number => lines.find((l) => l.id === id)?.final ?? 0
   const etfOnlyFinal = lineFinal('etfOnly')
@@ -145,13 +157,16 @@ export function buildEnding(series: MarketSeries, setup: RunSetup, decisions: De
   const windfall = loggedChoice(setup, decisions, 'windfall')
   const lumpChoice = windfall === 'spread' || windfall === 'cash' ? windfall : 'lump'
 
-  const dials = dialsByYear(decisions)
   const at15: Decision[] = [
     ...decisions.filter((d) => d.kind !== 'year'),
     ...dials.map((d, i): Decision => ({ kind: 'year', at: i * 12, saveRate: REFERENCE_SAVE_RATE, etfShare: d.etfShare })),
   ]
 
   const jonas = setup.schedule.jonas
+  const followedJonas = loggedChoice(setup, decisions, 'jonas') === 'follow'
+  // What his move took into the stock, read straight after it: a sale at the same boundary would hide it.
+  const upToJonas = decisions.filter((d) => d.at < jonas || (d.at === jonas && (d.kind === 'crash' || (d.kind === 'event' && d.event === 'jonas'))))
+  const moved = followedJonas ? simulate(setup, upToJonas, 'auto').snapshots[jonas].holdings.stock : 0
   const indexMultiple = indexGrowth(setup, jonas)
   let beatInHundred = 0
   for (let k = 0; k < STOCK_LIVES; k++) {
@@ -164,11 +179,12 @@ export function buildEnding(series: MarketSeries, setup: RunSetup, decisions: De
   return {
     final,
     paidIn,
+    savedFromIncome,
     you,
     lines,
     reveal: { region: series.meta.region, fromYear: setup.startYear, toYear: setup.startYear + YEARS, crashes },
     cards: {
-      time: { lowestDrawdown: fall.depth, monthsToRecover: fall.monthsToRecover, longestLosingYears: stats.longestLosingYears },
+      time: { lowestDrawdown: fall.depth, monthsToRecover: fall.monthsToRecover, longestLosingMonths: stats.longestLosingMonths },
       lumpSum: {
         choice: lumpChoice,
         lumpFinal: lastTotal(simulate(setup, flip(decisions, windfallAt, 'lump'), 'auto')),
@@ -177,7 +193,7 @@ export function buildEnding(series: MarketSeries, setup: RunSetup, decisions: De
       },
       savingsRate: {
         averageRate: mean(dials.map((d) => d.saveRate)),
-        paidIn,
+        savedFromIncome,
         finalAt15: lastTotal(simulate(setup, at15, 'auto')),
       },
       split: {
@@ -189,12 +205,13 @@ export function buildEnding(series: MarketSeries, setup: RunSetup, decisions: De
       },
       costs: { followed: loggedChoice(setup, decisions, 'keller') === 'follow', etfOnlyFinal, fundOnlyFinal: lineFinal('fundOnly') },
       stock: {
-        followed: loggedChoice(setup, decisions, 'jonas') === 'follow',
+        followed: followedJonas,
+        moved,
         stockMultiple: stockGrowth(setup, setup.stockAlpha, setup.stockNoise, jonas),
         indexMultiple,
         beatInHundred,
       },
-      emergency: { covered: bill.sold === 0 && bill.unpaid === 0, sold: bill.sold, drawdownAtSale: bill.drawdownAtSale },
+      emergency: { covered: bill.sold === 0 && bill.unpaid === 0, sold: bill.sold, unpaid: bill.unpaid, drawdownAtSale: bill.drawdownAtSale },
     },
     crashHistory: { wins: stats.hold.wins, total: stats.hold.total },
     share: { final, vsCashOnly: cashOnlyFinal > 0 ? final / cashOnlyFinal - 1 : 0 },
