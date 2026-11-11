@@ -202,6 +202,7 @@ export const de: Record<keyof typeof en, string> = {
   'card.emergency.title': 'Der Notgroschen',
   'card.emergency.you.covered': 'Als die Werkstattrechnung kam, hat dein Tagesgeld sie bezahlt, und deine Anlagen blieben, wo sie waren.',
   'card.emergency.you.sold': 'Als die Werkstattrechnung kam, reichte dein Tagesgeld nicht. Für {sold} wurden Anlagen verkauft, als der ETF {drop} unter seinem Hoch stand.',
+  'card.emergency.you.unpaid': 'Als die Werkstattrechnung kam, reichte dein Tagesgeld nicht, und Anlagen zum Verkaufen hattest du keine.',
   'card.emergency.other': 'Mit drei Monatsgehältern auf dem Tagesgeld ist eine Rechnung einfach eine Rechnung. Ohne sie wird verkauft, zu dem Kurs, den die Börse in dem Monat gerade zeigt.',
   'card.emergency.history': 'Deshalb kommt der Notgroschen zuerst: Mit ihm kannst du deine Anlagen in Ruhe lassen, wenn das Leben teuer wird oder die Börse abstürzt.',
 

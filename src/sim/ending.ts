@@ -31,6 +31,8 @@ export interface EndingModel {
     stock: { followed: boolean; stockMultiple: number; indexMultiple: number; beatInHundred: number }
     emergency: { covered: boolean; sold: number; drawdownAtSale: number }
   }
+  /** Across every window the game can deal: in how many holding through the first takeover beat selling into cash. */
+  crashHistory: { wins: number; total: number }
   /** vsCashOnly: final / cashOnly - 1; 0 when cashOnly is 0. */
   share: { final: number; vsCashOnly: number }
 }
@@ -194,6 +196,7 @@ export function buildEnding(series: MarketSeries, setup: RunSetup, decisions: De
       },
       emergency: { covered: bill.sold === 0 && bill.unpaid === 0, sold: bill.sold, drawdownAtSale: bill.drawdownAtSale },
     },
+    crashHistory: { wins: stats.hold.wins, total: stats.hold.total },
     share: { final, vsCashOnly: cashOnlyFinal > 0 ? final / cashOnlyFinal - 1 : 0 },
   }
 }

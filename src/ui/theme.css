@@ -57,6 +57,8 @@ body {
 }
 
 h1,
+h2,
+h3,
 p {
   margin: 0;
 }
@@ -440,7 +442,8 @@ button {
   background: var(--surface);
 }
 
-.headline-tag {
+.headline-tag,
+.reveal-tag {
   color: var(--tag);
   font-size: 0.6875rem;
   font-weight: 700;
@@ -739,8 +742,255 @@ button {
   font-size: 0.8125rem;
 }
 
+/* The ending: one long page that scans from top to bottom. The chart may grow to --chart-max;
+   everything else keeps to the text column. */
+.screen.ending {
+  max-width: calc(var(--chart-max) + 2 * var(--gutter));
+}
+
+.ending > * {
+  max-width: var(--column);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ending > .chart {
+  max-width: var(--chart-max);
+  height: clamp(180px, 34vh, 340px);
+}
+
+.ending-result {
+  margin-top: 6px;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.ending-lead {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text-dim);
+  font-size: 0.9375rem;
+  font-weight: 400;
+  letter-spacing: normal;
+}
+
+.ending-total {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ending-paid {
+  margin-top: 4px;
+  color: var(--text-dim);
+}
+
+.ending-caption {
+  margin-top: 24px;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ending-caption + .chart {
+  margin-top: 4px;
+}
+
+/* Every path in the chart and its sample in the legend: yours solid and bright, each other path
+   with a dash of its own, so they are told apart by more than colour. */
+.ending .chart,
+.legend-sample {
+  --chart-line: var(--text);
+}
+
+.ending [data-series='held'],
+.ending [data-series='sold'] {
+  stroke: var(--gain);
+  stroke-dasharray: 6 4;
+}
+
+.ending [data-series='fundOnly'] {
+  stroke: var(--fund);
+  stroke-dasharray: 10 4 0 4;
+}
+
+.ending [data-series='cashOnly'] {
+  stroke: var(--cash);
+  stroke-dasharray: 0 4;
+}
+
+.ending [data-series='etfOnly'] {
+  stroke-dasharray: 12 5;
+}
+
+.legend {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9375rem;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.legend-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.legend-row b {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.legend-row[data-emphasis='main'],
+.legend-row[data-emphasis='main'] b {
+  font-weight: 700;
+}
+
+.legend-row[data-emphasis='faint'] {
+  color: var(--text-dim);
+}
+
+.legend-sample {
+  flex: none;
+  width: 28px;
+  height: 10px;
+  overflow: visible;
+}
+
+/* The reveal: which years, which market, which crashes. */
+.reveal {
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.reveal-crashes {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.25em;
+}
+
+.reveal-history {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+}
+
+/* The lesson cards: a title, then three labelled lines. */
+.ending-heading {
+  margin-top: 32px;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.cards {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.card {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.card-title {
+  margin-bottom: 8px;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.card-lines {
+  margin: 0;
+}
+
+.card-lines dt {
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.card-lines dd {
+  margin: 0 0 10px;
+  font-size: 0.9375rem;
+}
+
+.card-lines dd:last-child {
+  margin-bottom: 0;
+}
+
+/* Share, play again, and on to the practice step. */
+.ending-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 28px;
+}
+
+.share-status:not(:empty) {
+  margin-top: 8px;
+  color: var(--gain);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.share-manual {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.share-manual label {
+  color: var(--text-dim);
+  font-size: 0.875rem;
+}
+
+.share-field {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.ending-practice {
+  margin-top: 8px;
+}
+
+.ending-smallprint {
+  display: grid;
+  gap: 6px;
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
 @media (min-width: 768px) {
-  .header-total {
+  .header-total,
+  .ending-result {
     font-size: 2.75rem;
   }
 }

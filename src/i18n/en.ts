@@ -202,6 +202,7 @@ export const en = {
   'card.emergency.title': 'The emergency fund',
   'card.emergency.you.covered': 'When the car bill came, your savings account paid it and your investments stayed put.',
   'card.emergency.you.sold': "When the car bill came, your savings account wasn't enough, so {sold} of your investments were sold while the ETF stood {drop} below its high.",
+  'card.emergency.you.unpaid': "When the car bill came, your savings account couldn't cover it, and you had no investments to sell.",
   'card.emergency.other': 'With three months of income in the savings account, a bill is just a bill. Without it, the bill gets paid by selling at whatever price the market shows that month.',
   'card.emergency.history': "That's why the emergency fund comes first: it lets you leave your investments alone when life gets expensive or the market crashes.",
 

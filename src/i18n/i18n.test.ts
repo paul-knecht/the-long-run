@@ -157,6 +157,7 @@ const required = [
   'card.stock.history',
   'card.emergency.you.covered',
   'card.emergency.you.sold',
+  'card.emergency.you.unpaid',
   'card.emergency.history',
   ...['1907', '1929', '1930', '1937', '1973', '2000', '2007', 'generic'].map((y) => `crashName.${y}`),
   'practice.option.world',
@@ -185,6 +186,8 @@ test('placeholders the screens rely on', () => {
   expect(ph('card.time.history.never15')).toBe('')
   expect(ph('card.time.history.lost')).toBe('{years}')
   expect(ph('card.lumpSum.history')).toBe('{pct}')
+  expect(ph('card.emergency.you.sold')).toBe('{drop},{sold}')
+  expect(ph('card.emergency.you.unpaid')).toBe('')
   expect(ph('event.bill.text.sold')).toBe('{amount}')
   expect(ph('crash.fall')).toBe('{loss},{pct}')
   expect(ph('crash.fall.none')).toBe('{pct}')

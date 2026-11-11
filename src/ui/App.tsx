@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'rea
 import { market } from '../data'
 import { type Lang, detectLang, t as translate } from '../i18n'
 import { MONTHS, START_AGE } from '../sim/constants'
+import { buildEnding } from '../sim/ending'
 import { createSetup } from '../sim/setup'
 import { decisionKey, simulate } from '../sim/simulate'
 import type { Decision, Timeline } from '../sim/types'
@@ -9,6 +10,7 @@ import { Chart } from './components/Chart'
 import { Header } from './components/Header'
 import { LangContext, type LangContextValue } from './lang'
 import { CrashScreen } from './screens/CrashScreen'
+import { EndingScreen } from './screens/EndingScreen'
 import { MessageScreen, Reaction } from './screens/MessageScreen'
 import { StartScreen } from './screens/StartScreen'
 import { YearScreen } from './screens/YearScreen'
@@ -65,7 +67,7 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
     [busy, cooldownMs, decisions],
   )
 
-  /** A new run: a fresh seed, an empty log, straight into year 1. "Play again" (Task 12) calls this too. */
+  /** A new run: a fresh seed, an empty log, straight into year 1. The ending's "Play again" calls this too. */
   const startRun = (): void => {
     setSeed(fixedSeed ?? randomSeed())
     setDecisions([])
@@ -73,7 +75,10 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
   }
 
   // The ending follows once nothing is pending and the last months have been drawn.
-  const view: Phase = phase === 'play' && pending === null && !busy ? 'ending' : phase
+  const over = pending === null
+  const view: Phase = phase === 'play' && over && !busy ? 'ending' : phase
+  // Everything the ending shows, worked out once when the run is over.
+  const ending = useMemo(() => (over ? buildEnding(market, setup, decisions) : null), [over, setup, decisions])
   // The screen turns once the line starts falling into a takeover.
   const mood: Mood = view === 'play' && fallFrom !== null && shown > fallFrom ? 'crash' : 'calm'
   // The pay of the month after the one on screen: the year being drawn, or the year ahead at a stop
@@ -98,7 +103,9 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
         {view === 'play' && (
           <PlayScreen timeline={timeline} shown={shown} busy={busy} mood={mood} salary={salary} reaction={reaction} decide={decide} />
         )}
-        {(view === 'ending' || view === 'practice') && <div data-testid="ending" />}
+        {view === 'ending' && ending && <EndingScreen model={ending} onAgain={startRun} onPractice={() => setPhase('practice')} />}
+        {/* The practice step (Task 13). */}
+        {view === 'practice' && <div data-testid="practice" />}
       </div>
     </LangContext.Provider>
   )

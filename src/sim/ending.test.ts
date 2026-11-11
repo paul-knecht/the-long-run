@@ -223,6 +223,13 @@ test('the emergency card reports how the bill was paid', () => {
   expect(sold.drawdownAtSale).toBe(run.bill!.drawdownAtSale)
 })
 
+test('the crash history counts, across all eligible windows, how often holding beat selling', () => {
+  const e = buildEnding(market, setup, yearly(20, 0.15, 0.7))
+  expect(e.crashHistory).toEqual(historyStats(market).hold)
+  expect(e.crashHistory.total).toBeGreaterThan(0)
+  expect(e.crashHistory.wins).toBeLessThanOrEqual(e.crashHistory.total)
+})
+
 test('the share line compares the final amount with savings account only', () => {
   const e = buildEnding(market, setup, yearly(20, 0.15, 0.7))
   const cashOnly = e.lines.find((l) => l.id === 'cashOnly')!.final
