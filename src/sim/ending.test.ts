@@ -14,7 +14,7 @@ test('ending for an ordinary run is complete and finite', () => {
   expect(e.you.length).toBe(241); expect(e.final).toBeCloseTo(e.you[240]);
   expect(e.reveal.toYear - e.reveal.fromYear).toBe(20); expect(e.reveal.region).toBe('us');
   expect(e.reveal.crashes.length).toBeGreaterThanOrEqual(1);
-  expect(e.cards.savingsRate.averageRate).toBeCloseTo(0.15); expect(e.cards.savingsRate.finalAt15).toBeCloseTo(e.final, 0);
+  expect(e.cards.savingsRate.shareOfIncome).toBeCloseTo(0.15, 12); expect(e.cards.savingsRate.finalAt15).toBeCloseTo(e.final, 0);
   expect(e.cards.costs.fundOnlyFinal).toBeLessThan(e.cards.costs.etfOnlyFinal);
   expect(e.cards.stock.beatInHundred).toBeGreaterThanOrEqual(0); expect(e.cards.stock.beatInHundred).toBeLessThanOrEqual(100);
 });
@@ -58,6 +58,12 @@ test('saved from income counts the monthly savings only; paid in also has the gi
   const saved = setup.salary.reduce((sum, pay, m) => sum + pay * (m < 60 ? 0.3 : 0.05), 0)
   expect(e.savedFromIncome).toBeCloseTo(saved, 6)
   expect(e.cards.savingsRate.savedFromIncome).toBe(e.savedFromIncome)
+  // The rate shown with it is the same money as a share of all the pay: €74,312 of €785,441, about
+  // 9.5%, where the plain average of the yearly dials would say 11.25%.
+  const income = setup.salary.reduce((sum, pay) => sum + pay, 0)
+  expect(Math.round(saved)).toBe(74312)
+  expect(Math.round(income)).toBe(785441)
+  expect(e.cards.savingsRate.shareOfIncome).toBeCloseTo(saved / income, 12)
   expect(e.cards.emergency.unpaid).toBe(0)
   expect(e.paidIn).toBeCloseTo(saved + WINDFALL - BILL, 6)
 
@@ -200,22 +206,31 @@ test("the lump-sum card's figure for the player's own choice is their final amou
   expect(spread.cards.lumpSum.lumpFinal).not.toBe(spread.final)
 })
 
-test('the savings-rate card averages the dials in force at each year boundary', () => {
+test('the savings-rate card weighs each year by its pay; the split card averages the dials in force at each year boundary', () => {
+  /** The share of all the pay put aside, when month m (0-based) saves rate(m). */
+  const weighted = (rate: (m: number) => number): number =>
+    setup.salary.reduce((sum, pay, m) => sum + pay * rate(m), 0) / setup.salary.reduce((sum, pay) => sum + pay, 0)
   const log: Decision[] = [
     { kind: 'year', at: 0, saveRate: 0.3, etfShare: 1 },
     { kind: 'year', at: 120, saveRate: 0.1, etfShare: 0 },
   ]
   const e = buildEnding(market, setup, log)
-  expect(e.cards.savingsRate.averageRate).toBeCloseTo(0.2, 12)
+  expect(e.cards.savingsRate.shareOfIncome).toBeCloseTo(weighted((m) => (m < 120 ? 0.3 : 0.1)), 12)
+  // Pay rises over the years, so the later, lower rate weighs more than the plain average of 20%.
+  expect(e.cards.savingsRate.shareOfIncome).toBeLessThan(0.2)
   expect(e.cards.split.averageEtfShare).toBeCloseTo(0.5, 12)
 
   const none = buildEnding(market, setup, [])
-  expect(none.cards.savingsRate.averageRate).toBeCloseTo(0.1, 12) // START_DIALS throughout
+  expect(none.cards.savingsRate.shareOfIncome).toBeCloseTo(0.1, 12) // START_DIALS throughout
   expect(none.cards.split.averageEtfShare).toBeCloseTo(0.5, 12)
 
   const late = buildEnding(market, setup, [{ kind: 'year', at: 60, saveRate: 0.2, etfShare: 0.9 }])
-  expect(late.cards.savingsRate.averageRate).toBeCloseTo((5 * 0.1 + 15 * 0.2) / 20, 12)
+  expect(late.cards.savingsRate.shareOfIncome).toBeCloseTo(weighted((m) => (m < 60 ? 0.1 : 0.2)), 12)
   expect(late.cards.split.averageEtfShare).toBeCloseTo((5 * 0.5 + 15 * 0.9) / 20, 12)
+
+  // With no pay at all there is no share to show.
+  const unpaid = { ...setup, salary: setup.salary.map(() => 0) }
+  expect(buildEnding(market, unpaid, yearly(20, 0.2, 0.5)).cards.savingsRate.shareOfIncome).toBe(0)
 })
 
 test('finalAt15 replays the same split and choices at 15%', () => {

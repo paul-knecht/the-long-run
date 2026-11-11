@@ -105,9 +105,9 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
           <PlayScreen setup={setup} timeline={timeline} shown={shown} busy={busy} mood={mood} salary={salary} reaction={reaction} decide={decide} />
         )}
         {view === 'ending' && ending && <EndingScreen model={ending} onAgain={startRun} onPractice={() => setPhase('practice')} />}
-        {/* The pretend broker: the average rate of the run, the pay of its last month; "back" leads to the start screen, where a new run begins. */}
+        {/* The pretend broker: the share of pay put aside in the run, the pay of its last month; "back" leads to the start screen, where a new run begins. */}
         {view === 'practice' && ending && (
-          <PracticeScreen saveRate={ending.cards.savingsRate.averageRate} salary={setup.salary[MONTHS - 1]} onDone={() => setPhase('start')} />
+          <PracticeScreen saveRate={ending.cards.savingsRate.shareOfIncome} salary={setup.salary[MONTHS - 1]} onDone={() => setPhase('start')} />
         )}
       </div>
     </LangContext.Provider>

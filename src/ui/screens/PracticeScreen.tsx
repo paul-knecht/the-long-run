@@ -88,8 +88,8 @@ function Choice(p: { group: string; id: string; label: string; note?: string; ch
 /**
  * A pretend broker app, marked as practice, in which the player sets up a savings plan on the
  * worldwide stock index ETF; then the checklist for doing it for real. Nothing is stored or sent.
- * `saveRate` is the player's average rate in the game and `salary` the last monthly salary; the
- * amount starts at their product and can be edited.
+ * `saveRate` is the share of their pay the player put aside in the game and `salary` the last
+ * monthly salary; the amount starts at their product and can be edited.
  */
 export function PracticeScreen(p: { saveRate: number; salary: number; onDone(): void }): JSX.Element {
   const { saveRate, salary, onDone } = p

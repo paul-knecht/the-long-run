@@ -107,7 +107,7 @@ function lessons(cards: EndingModel['cards'], lang: Lang, t: T): Lesson[] {
     {
       id: 'savingsRate',
       title: t('card.savingsRate.title'),
-      you: t('card.savingsRate.you', { rate: pct(savingsRate.averageRate), saved: eur(savingsRate.savedFromIncome) }),
+      you: t('card.savingsRate.you', { rate: pct(savingsRate.shareOfIncome), saved: eur(savingsRate.savedFromIncome) }),
       other: t('card.savingsRate.other', { at15: eur(savingsRate.finalAt15) }),
       history: t('card.savingsRate.history'),
     },

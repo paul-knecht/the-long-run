@@ -26,7 +26,8 @@ export interface EndingModel {
     /** longestLosingMonths: across all history, the longest ETF hold in months that ended below where it started. */
     time: { lowestDrawdown: number; monthsToRecover: number | null; longestLosingMonths: number }
     lumpSum: { choice: 'lump' | 'spread' | 'cash'; lumpFinal: number; spreadFinal: number; winRate: number }
-    savingsRate: { averageRate: number; savedFromIncome: number; finalAt15: number }
+    /** shareOfIncome: savedFromIncome as a share of all the pay over the 240 months (0 with no pay). */
+    savingsRate: { shareOfIncome: number; savedFromIncome: number; finalAt15: number }
     split: {
       averageEtfShare: number
       yourMaxDrawdown: number
@@ -141,6 +142,7 @@ export function buildEnding(series: MarketSeries, setup: RunSetup, decisions: De
   const dials = dialsByYear(decisions)
   // Month m's savings, as the engine puts them aside: its pay times the save rate of its year.
   const savedFromIncome = setup.salary.reduce((sum, pay, i) => sum + pay * dials[Math.floor(i / 12)].saveRate, 0)
+  const income = setup.salary.reduce((sum, pay) => sum + pay, 0)
   const lines = alternatives(setup, decisions)
   const lineFinal = (id: Alternative['id']): number => lines.find((l) => l.id === id)?.final ?? 0
   const etfOnlyFinal = lineFinal('etfOnly')
@@ -187,12 +189,12 @@ export function buildEnding(series: MarketSeries, setup: RunSetup, decisions: De
       time: { lowestDrawdown: fall.depth, monthsToRecover: fall.monthsToRecover, longestLosingMonths: stats.longestLosingMonths },
       lumpSum: {
         choice: lumpChoice,
-        lumpFinal: lastTotal(simulate(setup, flip(decisions, windfallAt, 'lump'), 'auto')),
-        spreadFinal: lastTotal(simulate(setup, flip(decisions, windfallAt, 'spread'), 'auto')),
+        lumpFinal: lastTotal(simulate(setup, flip(setup, decisions, windfallAt, 'lump'), 'auto')),
+        spreadFinal: lastTotal(simulate(setup, flip(setup, decisions, windfallAt, 'spread'), 'auto')),
         winRate: stats.lump.total > 0 ? stats.lump.wins / stats.lump.total : 0,
       },
       savingsRate: {
-        averageRate: mean(dials.map((d) => d.saveRate)),
+        shareOfIncome: income > 0 ? savedFromIncome / income : 0,
         savedFromIncome,
         finalAt15: lastTotal(simulate(setup, at15, 'auto')),
       },

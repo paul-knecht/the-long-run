@@ -224,6 +224,14 @@ test('the cards of a run that followed every tip, spread the windfall and sold t
   )
 })
 
+test('the savings card shows the share of the pay put aside, which matches the total it names', () => {
+  // 30% for five years, then 5%: €74,312 of €785,441 earned.
+  const log: Decision[] = Array.from({ length: 20 }, (_, i): Decision => ({ kind: 'year', at: 12 * i, saveRate: i < 5 ? 0.3 : 0.05, etfShare: 0.7 }))
+  const m = buildEnding(market, setup, log)
+  renderEnding(m)
+  expect(line(card('card.savingsRate.title'), 'card.label.you')).toBe('On average you put aside 9% of your income: €74,312 in total.')
+})
+
 test('saying yes to Jonas with money in the ETF moves half of it', () => {
   const m = buildEnding(market, setup, [...yearly(20, 0.15, 0.7), ev('jonas', 'follow')])
   expect(m.cards.stock.moved).toBeGreaterThan(0)

@@ -1,7 +1,9 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { market } from '../data'
 import { type Lang, t } from '../i18n'
 import { en } from '../i18n/en'
+import { createSetup } from '../sim/setup'
 import { App } from './App'
 import { LangContext } from './lang'
 import { PracticeScreen } from './screens/PracticeScreen'
@@ -248,7 +250,8 @@ test('in the app: the plan is prefilled from the run, and "Back to the start" re
   await userEvent.click(screen.getByRole('button', { name: /set up your real plan/i }))
   expect(screen.getByTestId('practice')).toBeInTheDocument()
   expect(screen.getByRole('heading', { level: 1 })).toHaveFocus()
-  expect((amount() as HTMLInputElement).valueAsNumber).toBeGreaterThan(0)
+  // Seed 5 played at the starting 10% throughout: 10% of the last month's pay.
+  expect((amount() as HTMLInputElement).valueAsNumber).toBe(Math.round(0.1 * createSetup(market, 5).salary[239]))
   await confirm()
   await userEvent.click(screen.getByRole('button', { name: en['practice.back'] }))
   expect(screen.queryByTestId('practice')).toBeNull()

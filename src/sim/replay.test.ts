@@ -4,7 +4,7 @@ import { createSetup } from './setup'
 import { alternatives, flip, singleBucket } from './replay'
 import { simulate } from './simulate'
 import { yearly } from './testHelpers'
-import type { Decision } from './types'
+import type { Decision, Holdings } from './types'
 
 const setup = createSetup(market, 3)
 
@@ -15,7 +15,7 @@ const twoHalves = (first: { saveRate: number; etfShare: number }, second: { save
 test('a flipped crash keeps every later save rate and freezes the split in force before it', () => {
   const at = 101
   const log: Decision[] = [...twoHalves({ saveRate: 0.1, etfShare: 0.7 }, { saveRate: 0.25, etfShare: 0.2 }), { kind: 'crash', at, choice: 'sell' }]
-  const out = flip(log, { kind: 'crash', at }, 'hold')
+  const out = flip(setup, log, { kind: 'crash', at }, 'hold')
   const years = out.filter((d) => d.kind === 'year')
   expect(years.map((d) => d.at)).toEqual(log.filter((d) => d.kind === 'year').map((d) => d.at))
   for (const y of years) {
@@ -38,7 +38,7 @@ test('a flipped crash at a year end treats that boundary as later, and drops the
     { kind: 'crash', at: 90, choice: 'sell' },
     { kind: 'crash', at: 60, choice: 'sell' },
   ]
-  const out = flip(log, { kind: 'crash', at: 60 }, 'hold')
+  const out = flip(setup, log, { kind: 'crash', at: 60 }, 'hold')
   // The crash at month 60 is decided before the year that starts there: the split in force is the one set at 48.
   expect(out.filter((d) => d.kind === 'year' && d.at >= 60)).toEqual([
     { kind: 'year', at: 60, saveRate: 0.3, etfShare: 0 },
@@ -46,51 +46,104 @@ test('a flipped crash at a year end treats that boundary as later, and drops the
   ])
   expect(out.filter((d) => d.kind === 'year' && d.at < 60)).toEqual(log.filter((d) => d.kind === 'year' && d.at < 60))
   expect(out.filter((d) => d.kind === 'action')).toEqual([{ kind: 'action', at: 48, action: 'getBackIn' }])
-  // Other choices, later crashes included, stay.
+  // Event choices stay; a later crash is held too.
   expect(out).toContainEqual({ kind: 'event', at: 72, event: 'werner', choice: 'follow' })
   expect(out.filter((d) => d.kind === 'crash')).toEqual([
-    { kind: 'crash', at: 90, choice: 'sell' },
+    { kind: 'crash', at: 90, choice: 'hold' },
     { kind: 'crash', at: 60, choice: 'hold' },
   ])
 })
 
-test('a flip to sell stays out: every later year keeps its save rate and sends new money to savings', () => {
-  const at = 101
+test('a flip to sell stays out: later save rates kept, new money and the gift to savings, every later offer declined', () => {
+  // Seed 3 schedule: Werner 12, Keller 36, Jonas 72, raise 84, bill 96, Grandma 120.
+  const at = 30
   const log: Decision[] = [
     ...twoHalves({ saveRate: 0.1, etfShare: 0.7 }, { saveRate: 0.25, etfShare: 0.9 }),
+    { kind: 'event', at: 12, event: 'werner', choice: 'follow' },
+    { kind: 'event', at: 36, event: 'keller', choice: 'follow' },
+    { kind: 'event', at: 72, event: 'jonas', choice: 'follow' },
+    { kind: 'event', at: 96, event: 'bill', choice: 'ok' },
     { kind: 'crash', at, choice: 'hold' },
-    { kind: 'action', at: 108, action: 'switchBackToEtf' },
+    { kind: 'crash', at: 179, choice: 'buyMore' },
+    { kind: 'action', at: 48, action: 'switchBackToEtf' },
   ]
-  const out = flip(log, { kind: 'crash', at }, 'sell')
+  const out = flip(setup, log, { kind: 'crash', at }, 'sell')
   for (const y of out.filter((d) => d.kind === 'year')) {
     expect(y).toEqual({ kind: 'year', at: y.at, saveRate: y.at < 120 ? 0.1 : 0.25, etfShare: y.at < at ? 0.7 : 0 })
   }
   expect(out.filter((d) => d.kind === 'action')).toEqual([])
-  expect(out.filter((d) => d.kind === 'crash')).toEqual([{ kind: 'crash', at, choice: 'sell' }])
+  // A later crash is held: the seller does nothing there, so "buy more" never takes them back in.
+  expect(out.filter((d) => d.kind === 'crash')).toEqual([
+    { kind: 'crash', at: 179, choice: 'hold' },
+    { kind: 'crash', at, choice: 'sell' },
+  ])
+  // Before the sale nothing changes; after it every offer is declined and the gift (not logged here) stays in savings.
+  const events = out.filter((d) => d.kind === 'event').sort((a, b) => a.at - b.at)
+  expect(events).toEqual([
+    { kind: 'event', at: 12, event: 'werner', choice: 'follow' },
+    { kind: 'event', at: 36, event: 'keller', choice: 'decline' },
+    { kind: 'event', at: 72, event: 'jonas', choice: 'decline' },
+    { kind: 'event', at: 96, event: 'bill', choice: 'ok' },
+    { kind: 'event', at: 120, event: 'windfall', choice: 'cash' },
+  ])
 })
 
 test('a flipped crash with no earlier year takes the starting split; one with no later year adds none', () => {
   const late: Decision[] = [{ kind: 'year', at: 120, saveRate: 0.2, etfShare: 0.9 }]
-  expect(flip(late, { kind: 'crash', at: 50 }, 'hold').filter((d) => d.kind === 'year')).toEqual([
+  expect(flip(setup, late, { kind: 'crash', at: 50 }, 'hold').filter((d) => d.kind === 'year')).toEqual([
     { kind: 'year', at: 120, saveRate: 0.2, etfShare: START_DIALS.etfShare },
   ])
-  expect(flip(late, { kind: 'crash', at: 50 }, 'sell').filter((d) => d.kind === 'year')).toEqual([{ kind: 'year', at: 120, saveRate: 0.2, etfShare: 0 }])
-  expect(flip([], { kind: 'crash', at: 50 }, 'sell')).toEqual([{ kind: 'crash', at: 50, choice: 'sell' }])
+  expect(flip(setup, late, { kind: 'crash', at: 50 }, 'sell').filter((d) => d.kind === 'year')).toEqual([{ kind: 'year', at: 120, saveRate: 0.2, etfShare: 0 }])
+  expect(flip(setup, [], { kind: 'crash', at: 150 }, 'hold')).toEqual([{ kind: 'crash', at: 150, choice: 'hold' }])
 })
 
+/** The money in the ETF, the fund and the stock. */
+const invested = (h: Holdings): number => h.etf + h.fund + h.stock
+
 test('the sold line: a holder who never moved the dials is shown selling and staying out (seed 56)', () => {
-  // Seed 56 takes over at month 43. 15% saved, 70% to the ETF throughout.
+  // Seed 56 takes over at month 43 and again at 164 and 212; Grandma's money comes at month 168.
   const fiftySix = createSetup(market, 56)
-  expect(fiftySix.takeovers[0]).toBe(43)
+  expect(fiftySix.takeovers).toEqual([43, 164, 212])
   const log = yearly(20, 0.15, 0.7)
   const sold = alternatives(fiftySix, log).find((a) => a.id === 'sold')!
-  expect(Math.round(sold.final)).toBe(160956)
-  // From the crash on the savings go to the savings account: nothing is invested until Grandma's money
-  // at month 168, which the player's own later choice (invest at once) still puts into the ETF.
-  const run = simulate(fiftySix, flip(log, { kind: 'crash', at: 43 }, 'sell'), 'auto')
-  const out = run.snapshots.slice(43, fiftySix.schedule.windfall)
-  expect(out.every((s) => s.holdings.etf === 0 && s.holdings.fund === 0 && s.holdings.stock === 0)).toBe(true)
-  expect(run.snapshots[fiftySix.schedule.windfall].holdings.etf).toBe(10000)
+  const run = simulate(fiftySix, flip(fiftySix, log, { kind: 'crash', at: 43 }, 'sell'), 'auto')
+  expect(sold.totals).toEqual(run.snapshots.map((s) => s.total))
+  // From the sale to the end nothing is invested, the gift included.
+  expect(run.snapshots.slice(43).every((s) => invested(s.holdings) === 0)).toBe(true)
+  expect(run.flows).toEqual(simulate(fiftySix, log, 'auto').flows)
+})
+
+test('the sold line stays out even when the player bought more at a later crash (seed 4)', () => {
+  // Seed 4 takes over at months 81 and 166; the player holds at the first and buys more at the second.
+  const four = createSetup(market, 4)
+  expect(four.takeovers).toEqual([81, 166])
+  const log: Decision[] = [...yearly(20, 0.15, 0.7), { kind: 'crash', at: 81, choice: 'hold' }, { kind: 'crash', at: 166, choice: 'buyMore' }]
+  const sold = alternatives(four, log).find((a) => a.id === 'sold')!
+  const run = simulate(four, flip(four, log, { kind: 'crash', at: 81 }, 'sell'), 'auto')
+  expect(sold.totals).toEqual(run.snapshots.map((s) => s.total))
+  expect(run.snapshots.slice(81).every((s) => invested(s.holdings) === 0)).toBe(true)
+  expect(run.flows).toEqual(simulate(four, log, 'auto').flows)
+})
+
+test('a player who sold at both crashes is shown holding at both (seed 1)', () => {
+  // Seed 1 takes over at months 101 and 149; the player sells at both, getting back in between.
+  const one = createSetup(market, 1)
+  expect(one.takeovers).toEqual([101, 149])
+  const log: Decision[] = [
+    ...yearly(20, 0.15, 0.7),
+    { kind: 'crash', at: 101, choice: 'sell' },
+    { kind: 'action', at: 108, action: 'getBackIn' },
+    { kind: 'crash', at: 149, choice: 'sell' },
+    { kind: 'action', at: 156, action: 'getBackIn' },
+  ]
+  const held = alternatives(one, log).find((a) => a.id === 'held')!
+  const run = simulate(one, flip(one, log, { kind: 'crash', at: 101 }, 'hold'), 'auto')
+  expect(held.totals).toEqual(run.snapshots.map((s) => s.total))
+  // At the second takeover the ETF stays where it is: no sale moves it to the savings account.
+  expect(run.snapshots[148].holdings.etf).toBeGreaterThan(0)
+  expect(run.snapshots[149].holdings.etf).toBeGreaterThan(run.snapshots[148].holdings.etf * 0.5)
+  expect(run.snapshots[149].holdings.cash).toBeLessThan(run.snapshots[148].holdings.cash + 1000)
+  expect(run.parked).toBeNull()
 })
 
 test('a flipped event changes only that choice: every later dial and action stays', () => {
@@ -101,7 +154,7 @@ test('a flipped event changes only that choice: every later dial and action stay
     { kind: 'crash', at: 140, choice: 'sell' },
     { kind: 'event', at: 108, event: 'windfall', choice: 'lump' },
   ]
-  const out = flip(log, { kind: 'event', at: 108, event: 'windfall' }, 'spread')
+  const out = flip(setup, log, { kind: 'event', at: 108, event: 'windfall' }, 'spread')
   expect(out).toEqual([...log.slice(0, -1), { kind: 'event', at: 108, event: 'windfall', choice: 'spread' }])
 })
 
@@ -114,7 +167,7 @@ test("a flipped crash replays the player's own contributions, month by month", (
   const held: Decision[] = [...twoHalves({ saveRate: 0.1, etfShare: 0.7 }, { saveRate: 0.3, etfShare: 0.2 }), { kind: 'crash', at, choice: 'hold' }]
   for (const [log, other] of [[sold, 'hold'], [held, 'sell']] as const) {
     const own = simulate(one, log, 'auto')
-    const flipped = simulate(one, flip(log, { kind: 'crash', at }, other), 'auto')
+    const flipped = simulate(one, flip(one, log, { kind: 'crash', at }, other), 'auto')
     expect(flipped.flows).toEqual(own.flows)
     expect(flipped.snapshots[240].total).not.toBe(own.snapshots[240].total)
   }
@@ -123,16 +176,16 @@ test("a flipped crash replays the player's own contributions, month by month", (
 test('flip types the choice by the kind of target', () => {
   const log = yearly(20, 0.1, 0.5)
   // @ts-expect-error a crash takes a crash choice
-  expect(() => flip(log, { kind: 'crash', at: 60 }, 'lump')).not.toThrow()
+  expect(() => flip(setup, log, { kind: 'crash', at: 60 }, 'lump')).not.toThrow()
   // @ts-expect-error an event takes an event choice
-  expect(() => flip(log, { kind: 'event', at: 12, event: 'werner' }, 'hold')).not.toThrow()
+  expect(() => flip(setup, log, { kind: 'event', at: 12, event: 'werner' }, 'hold')).not.toThrow()
 })
 
 test('flip adds a crash decision when none was logged, and replaces an event choice', () => {
-  const added = flip(yearly(20, 0.1, 0.5), { kind: 'crash', at: 60 }, 'sell')
+  const added = flip(setup, yearly(20, 0.1, 0.5), { kind: 'crash', at: 60 }, 'sell')
   expect(added.filter((d) => d.kind === 'crash')).toEqual([{ kind: 'crash', at: 60, choice: 'sell' }])
   const log: Decision[] = [...yearly(3, 0.1, 0.5), { kind: 'event', at: 12, event: 'werner', choice: 'follow' }]
-  const out = flip(log, { kind: 'event', at: 12, event: 'werner' }, 'decline')
+  const out = flip(setup, log, { kind: 'event', at: 12, event: 'werner' }, 'decline')
   expect(out.filter((d) => d.kind === 'event')).toEqual([{ kind: 'event', at: 12, event: 'werner', choice: 'decline' }])
 })
 
@@ -162,7 +215,7 @@ test('a player who sold at the first takeover is shown what holding would have d
   const alts = alternatives(setup, log)
   expect(alts[0].id).toBe('held')
   expect(alts.some((a) => a.id === 'sold')).toBe(false)
-  const held = simulate(setup, flip(log, { kind: 'crash', at }, 'hold'), 'auto')
+  const held = simulate(setup, flip(setup, log, { kind: 'crash', at }, 'hold'), 'auto')
   expect(alts[0].final).toBe(held.snapshots[240].total)
 })
 
@@ -187,12 +240,12 @@ test('flip adds a missing event decision, so lump and spread differ; a logged on
   const at = setup.schedule.windfall
   const log = yearly(20, 0.15, 0.7)
   const target = { kind: 'event', at, event: 'windfall' } as const
-  const lump = flip(log, target, 'lump')
-  const spread = flip(log, target, 'spread')
+  const lump = flip(setup, log, target, 'lump')
+  const spread = flip(setup, log, target, 'spread')
   expect(spread.filter((d) => d.kind === 'event')).toEqual([{ kind: 'event', at, event: 'windfall', choice: 'spread' }])
   expect(simulate(setup, spread, 'auto').snapshots[240].total).not.toBe(
     simulate(setup, lump, 'auto').snapshots[240].total,
   )
-  const again = flip(lump, target, 'spread')
+  const again = flip(setup, lump, target, 'spread')
   expect(again.filter((d) => d.kind === 'event')).toEqual([{ kind: 'event', at, event: 'windfall', choice: 'spread' }])
 })

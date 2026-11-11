@@ -18,39 +18,62 @@ export type FlipTarget = { kind: 'crash'; at: number } | { kind: 'event'; at: nu
 
 type YearDecision = Extract<Decision, { kind: 'year' }>
 
+/** The answers of a seller who stays out: every offer turned down, Grandma's money left in savings. */
+const STAY_OUT: readonly { event: EventId; choice: EventChoice }[] = [
+  { event: 'werner', choice: 'decline' },
+  { event: 'keller', choice: 'decline' },
+  { event: 'jonas', choice: 'decline' },
+  { event: 'windfall', choice: 'cash' },
+]
+
 /**
  * The log with one choice changed: the logged decision for the target is replaced, or added when
  * the log holds none (auto mode would have filled it in). The player's save rate in every year is
  * kept, so the money going in is theirs.
- * - A crash: every `year` decision from the crash's month on keeps its save rate but takes a frozen
- *   split. Selling means staying out, so after a sale that split is 0 (new money goes to the savings
- *   account, as the sale itself does); otherwise it is the split in force just before the crash, the
- *   one of the last `year` decision before it (the starting split if there is none). The actions from
- *   the crash's month on are dropped, so a seller never gets back in; every other event and crash
- *   choice stays. A crash in a year's last month comes before that boundary's year.
- * - An event: only that choice changes; the rest of the log stays as it is.
+ *
+ * A crash at month `at`. What comes after it is everything from `at` on, except a crash at `at`
+ * itself; a crash in a year's last month comes before that boundary's event and year.
+ * - Every later `year` decision keeps its save rate and takes a frozen split.
+ * - Every later action is dropped and every later crash is held.
+ * - Flipped to hold: the frozen split is the one in force just before the crash, the split of the
+ *   last `year` decision before it (the starting split if there is none). Later events stay.
+ * - Flipped to sell, the seller stays out: the frozen split is 0, so new money goes to the savings
+ *   account. Every later offer from Uncle Werner, Mr. Keller and Jonas is declined, and Grandma's
+ *   money is left in the savings account, whether those events were logged or not. From the sale on
+ *   the ETF and the fund hold nothing; Jonas's stock, which a sale does not sell (the player's own
+ *   sale keeps it too), stays as it was and only moves with the market.
+ *
+ * An event: only that choice changes; the rest of the log stays as it is.
  */
-export function flip(decisions: Decision[], target: Extract<FlipTarget, { kind: 'crash' }>, choice: CrashChoice): Decision[]
-export function flip(decisions: Decision[], target: Extract<FlipTarget, { kind: 'event' }>, choice: EventChoice): Decision[]
-export function flip(decisions: Decision[], target: FlipTarget, choice: CrashChoice | EventChoice): Decision[] {
+export function flip(setup: RunSetup, decisions: Decision[], target: Extract<FlipTarget, { kind: 'crash' }>, choice: CrashChoice): Decision[]
+export function flip(setup: RunSetup, decisions: Decision[], target: Extract<FlipTarget, { kind: 'event' }>, choice: EventChoice): Decision[]
+export function flip(setup: RunSetup, decisions: Decision[], target: FlipTarget, choice: CrashChoice | EventChoice): Decision[] {
+  const isEvent = (d: Decision, event: EventId, at: number): boolean => d.kind === 'event' && d.event === event && d.at === at
   if (target.kind === 'event') {
-    const rest = decisions.filter((d) => !(d.kind === 'event' && d.at === target.at && d.event === target.event))
-    return [...rest, { kind: 'event', at: target.at, event: target.event, choice: choice as EventChoice }]
+    return [...decisions.filter((d) => !isEvent(d, target.event, target.at)), { kind: 'event', at: target.at, event: target.event, choice: choice as EventChoice }]
   }
 
+  const sell = choice === 'sell'
   // The first year decision logged for a boundary is the one the engine uses.
   const before = decisions.reduce<YearDecision | undefined>(
     (last, d) => (d.kind === 'year' && d.at < target.at && (!last || d.at > last.at) ? d : last),
     undefined,
   )
-  const etfShare = choice === 'sell' ? 0 : dialsOf(before ?? START_DIALS).etfShare
+  const etfShare = sell ? 0 : dialsOf(before ?? START_DIALS).etfShare
+  const stayOut = sell ? STAY_OUT.filter(({ event }) => setup.schedule[event] >= target.at) : []
+
   const rest = decisions.flatMap((d): Decision[] => {
-    if (d.kind === 'crash' && d.at === target.at) return []
+    if (d.kind === 'crash') return d.at < target.at ? [d] : d.at > target.at ? [{ ...d, choice: 'hold' }] : []
     if (d.kind === 'action' && d.at >= target.at) return []
     if (d.kind === 'year' && d.at >= target.at) return [{ ...d, etfShare }]
+    if (stayOut.some(({ event }) => isEvent(d, event, setup.schedule[event]))) return []
     return [d]
   })
-  return [...rest, { kind: 'crash', at: target.at, choice: choice as CrashChoice }]
+  return [
+    ...rest,
+    ...stayOut.map(({ event, choice: answer }): Decision => ({ kind: 'event', at: setup.schedule[event], event, choice: answer })),
+    { kind: 'crash', at: target.at, choice: choice as CrashChoice },
+  ]
 }
 
 /**
@@ -89,7 +112,7 @@ export function alternatives(setup: RunSetup, decisions: Decision[]): Alternativ
   if (at !== undefined) {
     const logged = decisions.find((d) => d.kind === 'crash' && d.at === at)
     const sold = logged?.kind === 'crash' && logged.choice === 'sell'
-    const flipped = simulate(setup, flip(decisions, { kind: 'crash', at }, sold ? 'hold' : 'sell'), 'auto')
+    const flipped = simulate(setup, flip(setup, decisions, { kind: 'crash', at }, sold ? 'hold' : 'sell'), 'auto')
     out.push(
       alt(
         sold ? 'held' : 'sold',
