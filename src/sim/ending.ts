@@ -1,11 +1,12 @@
 import { CRASH_MIN_DEPTH, MONTHS, START_DIALS, YEARS } from './constants'
 import { etfReturn } from './market'
+import { grow, total } from './portfolio'
 import { alternatives, flip, type Alternative, type FlipTarget } from './replay'
 import { createRng } from './rng'
 import { drawStock } from './setup'
 import { dialsOf, simulate } from './simulate'
 import { historyStats } from './stats'
-import type { Decision, EventChoice, EventId, MarketSeries, RunSetup, Timeline } from './types'
+import type { Decision, EventChoice, EventId, MarketSeries, RunSetup, Snapshot, Timeline } from './types'
 
 export interface EndingModel {
   final: number
@@ -60,15 +61,19 @@ function loggedChoice(setup: RunSetup, decisions: Decision[], event: EventId): E
 }
 
 /**
- * How the player's money did with what was paid in or taken out removed: 1 at the start, then
- * each month's change from the previous total, net of that month's flow (no change while the
- * previous total is 0).
+ * What the market did to the money the player already held: 1 at the start, then each month the
+ * growth of the previous month's holdings (after that boundary's decisions) over that month, so
+ * money paid in or taken out, entry fees on new money and one-off transfer costs are not a fall.
+ * No change while nothing is held.
  */
-function performanceIndex(totals: number[], flows: number[]): number[] {
+function performanceIndex(setup: RunSetup, snapshots: Snapshot[]): number[] {
   const index = [1]
-  for (let m = 1; m < totals.length; m++) {
-    const r = totals[m - 1] > 0 ? (totals[m] - flows[m]) / totals[m - 1] - 1 : 0
-    index.push(index[m - 1] * (1 + r))
+  for (let m = 1; m < snapshots.length; m++) {
+    const held = snapshots[m - 1]
+    const r = setup.returns[m - 1]
+    const stockExtra = setup.stockAlpha / 12 + setup.stockNoise[m - 1]
+    const growth = held.total > 0 ? total(grow(held.holdings, { stock: r.stock, cash: r.cash, stockExtra })) / held.total : 1
+    index.push(index[m - 1] * growth)
   }
   return index
 }
@@ -132,7 +137,7 @@ export function buildEnding(series: MarketSeries, setup: RunSetup, decisions: De
     .filter((e) => e.depth >= CRASH_MIN_DEPTH && e.triggerMonth !== null && e.triggerMonth < MONTHS)
     .map((e) => ({ peakYear: setup.startYear + Math.floor(Math.max(0, e.peakMonth - 1) / 12), depth: e.depth }))
 
-  const fall = worstFall(performanceIndex(you, run.flows))
+  const fall = worstFall(performanceIndex(setup, run.snapshots))
 
   const windfallAt: FlipTarget = { kind: 'event', at: setup.schedule.windfall, event: 'windfall' }
   const windfall = loggedChoice(setup, decisions, 'windfall')

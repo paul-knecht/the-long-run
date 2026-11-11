@@ -4,7 +4,7 @@ import { createSetup } from './setup'
 import { simulate } from './simulate'
 import { historyStats } from './stats'
 import { yearly } from './testHelpers'
-import type { Decision } from './types'
+import type { Decision, EventChoice, EventId } from './types'
 
 const setup = createSetup(market, 3)
 
@@ -76,6 +76,41 @@ test('a run that never falls has no low and nothing to recover from', () => {
   const e = buildEnding(market, setup, [...yearly(20, 0.15, 0), windfall('cash')])
   expect(e.cards.time.lowestDrawdown).toBe(0)
   expect(e.cards.time.monthsToRecover).toBe(0)
+})
+
+test("the fund's entry fee on new money is not a fall", () => {
+  // Tiny savings in cash, Keller followed: the bill empties the cash, then the lump-sum windfall pays the
+  // fund's 5% entry fee on 10,000 against a balance of a few hundred euros.
+  const six = createSetup(market, 6)
+  const keller: Decision = { kind: 'event', at: six.schedule.keller, event: 'keller', choice: 'follow' }
+  const e = buildEnding(market, six, [...yearly(20, 0.01, 0), keller])
+  expect(e.cards.time.lowestDrawdown).toBeGreaterThan(0)
+  expect(e.cards.time.lowestDrawdown).toBeLessThan(1)
+})
+
+test('the lowest point is a share between 0 and 1 for fund-heavy and tiny-savings runs', () => {
+  let runs = 0
+  for (let s = 0; s < 9; s++) {
+    const st = createSetup(market, s)
+    const ev = (event: EventId, choice: EventChoice): Decision => ({ kind: 'event', at: st.schedule[event], event, choice })
+    // Nothing saved until the year before the windfall, then 1% into cash: the smallest balance a lump into the fund can meet.
+    const beforeWindfall = yearly(20, 0, 0.5).map((d) => (d.kind === 'year' && d.at === st.schedule.windfall - 12 ? { ...d, saveRate: 0.01 } : d))
+    const logs: Decision[][] = [[...beforeWindfall, ev('keller', 'follow')]]
+    for (const rate of [0, 0.01, 0.3]) {
+      for (const share of [0, 1]) {
+        const base = yearly(20, rate, share)
+        logs.push(base, [...base, ev('keller', 'follow')], [...base, ev('keller', 'follow'), ev('windfall', 'spread')], [...base, ev('jonas', 'follow')])
+      }
+    }
+    for (const log of logs) {
+      const { lowestDrawdown, monthsToRecover } = buildEnding(market, st, log).cards.time
+      runs++
+      expect(lowestDrawdown, `seed ${s}`).toBeGreaterThanOrEqual(0)
+      expect(lowestDrawdown, `seed ${s}`).toBeLessThanOrEqual(1)
+      if (monthsToRecover !== null) expect(Number.isInteger(monthsToRecover) && monthsToRecover >= 0).toBe(true)
+    }
+  }
+  expect(runs).toBeGreaterThanOrEqual(200)
 })
 
 test('a fall still under water at month 240 has no recovery', () => {
