@@ -91,7 +91,7 @@ export const en = {
   'event.windfall.reply.cash': 'Leave it in savings',
   'event.windfall.after.lump': 'All at once! Just like your grandad 😄 Call me sometime.',
   'event.windfall.after.spread': 'A little every month. So patient 😊 Call me sometime.',
-  'event.windfall.after.cash': 'In the savings account, just like I do it 😊 Call me sometime.',
+  'event.windfall.after.cash': "Into savings, that's what I do too 😊 Call me sometime.",
 
   // The crash
   'crash.fall': '{amount} ({pct}) and falling',
@@ -116,7 +116,7 @@ export const en = {
 
   // A headline after each year, picked by how the year went
   'headline.tag': 'Headline',
-  'headline.up.1': 'Stocks hit a record high. Taxi drivers are giving share tips.',
+  'headline.up.1': 'Stocks keep climbing. Taxi drivers are giving share tips.',
   'headline.up.2': 'Analysts: "This rally has a long way to run."',
   'headline.up.3': 'Everyone wants in: share buying at record levels.',
   'headline.flat.1': 'Markets go sideways. Traders yawn.',
@@ -138,7 +138,7 @@ export const en = {
   'ending.line.fundOnly': "Everything in Mr. Keller's fund",
   'ending.line.cashOnly': 'Savings account only',
   'ending.reveal.tag': 'Revealed',
-  'ending.reveal.us': 'You just lived through {from} to {to} on the US stock market. The amounts were US dollars, shown to you as euros and not adjusted for inflation. A worldwide ETF spreads the same idea across many more countries.',
+  'ending.reveal.us': 'You just lived through {from} to {to} on the US stock market. The market moved in US dollars, shown to you as euros, and nothing was adjusted for inflation. A worldwide ETF spreads the same idea across many more countries.',
   'ending.reveal.world': 'You just lived through {from} to {to} on the worldwide stock market. The amounts were not adjusted for inflation.',
   'ending.reveal.crashes': 'What hit you was real:',
   'ending.reveal.crash': '{name}, down {depth} from the top',
@@ -156,15 +156,16 @@ export const en = {
   // Lesson cards: what you did, the other path in your run, and what all the history shows
   'card.label.you': 'You',
   'card.label.other': 'The other path',
-  'card.label.history': 'Across all the years',
+  'card.label.history': 'Beyond your run',
 
   'card.time.title': 'Time is the risk dial',
   'card.time.you.fell': 'At the worst point the market had knocked {drop} off your money. It took {months} months to climb back.',
+  'card.time.you.fellOne': 'At the worst point the market had knocked {drop} off your money. It took just one month to climb back.',
   'card.time.you.notBack': 'At the worst point the market had knocked {drop} off your money, and by the end it had not fully climbed back.',
-  'card.time.you.noFall': 'Your money never fell, because none of it was in the stock market.',
+  'card.time.you.noFall': 'Your money never fell, because little or none of it was in the stock market.',
   'card.time.other': 'Money you need within a few years can get caught by a crash with no time to recover. Money that can wait has time on its side.',
-  'card.time.history.never15': "In all the years this game knows, no stretch of 15 years or more ever ended in a loss. That's history, not a guarantee.",
-  'card.time.history.lost': "In all the years this game knows, the longest stretch that still ended in a loss was {years} years, and every longer one ended ahead. That's history, not a guarantee.",
+  'card.time.history.never15': "In all the years this game knows, anyone who invested and held for 15 years or more ended ahead. That's history, not a guarantee.",
+  'card.time.history.lost': "In all the years this game knows, the longest hold that still ended in a loss was {years} years; every longer hold ended ahead. That's history, not a guarantee.",
 
   'card.lumpSum.title': 'All at once or bit by bit',
   'card.lumpSum.you.lump': "You invested Grandma's money all at once.",
@@ -176,12 +177,12 @@ export const en = {
   'card.savingsRate.title': 'How much you put aside',
   'card.savingsRate.you': 'On average you put aside {rate} of your income. In total, {paidIn} went in.',
   'card.savingsRate.other': 'At 15% every year, the same run ends at {at15}.',
-  'card.savingsRate.history': "Aim to put 10 to 20% of your income aside every month. It's the one dial you fully control.",
+  'card.savingsRate.history': "Aim to put 10 to 20% of your income aside every month. It's the part you control, whatever the market does.",
 
   'card.split.title': 'Risk is a split',
   'card.split.you': 'On average {share} of your new money went into the stock market. Your deepest fall was {yourDrop}.',
   'card.split.other': 'All in the ETF: down as much as {etfDrop}, ending at {etfFinal}. All in savings: no fall, ending at {cashFinal}.',
-  'card.split.history': 'You set your risk with this split, not with cleverer products. More savings account means smaller falls and slower growth.',
+  'card.split.history': 'You set your risk with this split, not with cleverer products. More in the savings account means smaller falls and slower growth.',
 
   'card.costs.title': 'What costs add up to',
   'card.costs.you.followed': "You moved into Mr. Keller's fund: 5% on the way in, 1.8% every year.",
@@ -189,25 +190,26 @@ export const en = {
   'card.costs.other': 'Same savings, same market: all in the ETF ends at {etf}, all in his fund at {fund}.',
   'card.costs.history': 'In this game the fund follows the same market, so the gap is pure cost. Worldwide ETFs cost roughly 0.05 to 0.2% a year; check that number before you buy.',
 
-  'card.stock.title': 'One stock or thousands',
+  'card.stock.title': 'One stock or a thousand',
   'card.stock.you.followed': "You put half your ETF into Jonas's stock.",
   'card.stock.you.declined': "You passed on Jonas's stock.",
   'card.stock.other': "From Jonas's tip to the end, €100 in his stock became {stock}, and €100 in the ETF became {etf}.",
-  'card.stock.history': 'We replayed your years with 100 stocks like his, and {beat} of them beat the ETF. A few single stocks win big, most trail the market, and an ETF holds thousands.',
+  'card.stock.history': 'We replayed your years with 100 stocks like his, and {beat} of them beat the ETF. A few single stocks win big, most trail the market, and a worldwide ETF holds more than a thousand.',
 
   'card.emergency.title': 'The emergency fund',
   'card.emergency.you.covered': 'When the car bill came, your savings account paid it and your investments stayed put.',
-  'card.emergency.you.sold': "When the car bill came, your savings account wasn't enough, so {sold} of investments were sold while the ETF stood {drop} below its high.",
+  'card.emergency.you.sold': "When the car bill came, your savings account wasn't enough, so {sold} of your investments were sold while the ETF stood {drop} below its high.",
   'card.emergency.other': 'With three months of income in the savings account, a bill is just a bill. Without it, the bill gets paid by selling at whatever price the market shows that month.',
   'card.emergency.history': "That's why the emergency fund comes first: it lets you leave your investments alone when life gets expensive or the market crashes.",
 
-  // The real crashes, by the year the market peaked; the ending matches within a year
+  // The real crashes, by the year the market peaked; crashNameKey (index.ts) picks one for a peak year
   'crashName.1876': 'The Long Depression of the 1870s',
   'crashName.1893': 'The Panic of 1893',
   'crashName.1902': "The Rich Man's Panic of 1903",
   'crashName.1907': 'The Panic of 1907',
   'crashName.1916': 'The World War I slump of 1917',
   'crashName.1929': 'The Wall Street Crash of 1929 and the Great Depression',
+  'crashName.1930': 'The slide into the Great Depression, 1930 to 1932',
   'crashName.1931': 'The depths of the Great Depression',
   'crashName.1937': 'The recession of 1937 to 1938',
   'crashName.1968': 'The bear market of 1969 to 1970',
@@ -224,7 +226,7 @@ export const en = {
   'practice.intro': 'Set one up for practice, so the real thing feels familiar. No real money moves here.',
   'practice.what': 'What to buy',
   'practice.option.world': 'World stock index ETF',
-  'practice.option.world.note': 'Thousands of companies worldwide · roughly 0.05 to 0.2% a year',
+  'practice.option.world.note': 'More than a thousand companies worldwide · roughly 0.05 to 0.2% a year',
   'practice.option.theme': 'AI & Robotics theme ETF',
   'practice.option.theme.note': 'A few dozen companies riding one trend',
   'practice.option.fund': "Your bank's managed fund",
@@ -242,7 +244,7 @@ export const en = {
   'practice.payouts.payOut': 'Pay out to my account',
   'practice.start': 'Start savings plan',
   'practice.done.title': 'Practice plan set up',
-  'practice.done.text': "Nothing was bought, this was practice. Here's how to do it for real:",
+  'practice.done.text': "Nothing was bought; this was just practice. Here's how to do it for real:",
   'practice.check.first': 'Before you start, keep about three months of income in a savings account as your emergency fund.',
   'practice.check.1': 'Open a securities account at a low-cost broker.',
   'practice.check.2': 'Search for an ETF on a worldwide stock index. Common index names: MSCI World, FTSE All-World, MSCI ACWI.',
@@ -253,10 +255,11 @@ export const en = {
   // Small print, at the end of the ending and the practice step
   'smallprint.advice': 'This game is education, not investment advice.',
   'smallprint.past': 'Past performance is no guarantee of future results.',
-  'smallprint.inflation': "Amounts are not adjusted for inflation: salaries are in today's money even when the years are long ago.",
+  'smallprint.inflation': "Amounts are not adjusted for inflation: salaries are in today's money even when the years you played are long past.",
   'smallprint.taxes': 'Taxes are left out.',
   'smallprint.data': 'The history is the US stock market with dividends reinvested, in US dollars shown as euros; exchange rates are not modelled. A worldwide ETF spreads the same idea across many more countries.',
-  'smallprint.savings': 'The savings account earns an approximation: the US long-term interest rate of the same month, minus one percentage point.',
+  'smallprint.savings': 'The savings account pays an approximate rate: the US long-term interest rate of the same month minus one percentage point, never below zero.',
+  'smallprint.monthly': 'Prices are monthly averages, so the sharpest days are smoothed out.',
   'smallprint.costs': "In this game the ETF costs 0.2% a year; Mr. Keller's fund takes 5% of money going in and 1.8% a year.",
   'smallprint.credit': 'Market data: Robert Shiller, via DataHub.',
 } as const

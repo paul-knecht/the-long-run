@@ -18,4 +18,25 @@ export function detectLang(navigatorLanguage: string | undefined): Lang {
   return navigatorLanguage?.toLowerCase().startsWith('de') ? 'de' : 'en'
 }
 
+/** The years that have a crash name of their own, read from the `crashName.<year>` keys. */
+const CRASH_YEARS: number[] = Object.keys(en).flatMap((k) => {
+  const year = /^crashName\.(\d{4})$/.exec(k)?.[1]
+  return year ? [Number(year)] : []
+})
+
+/**
+ * The name key for a crash that peaked in this year: the exact year if it has a name, else the
+ * nearest named year within one year (the later one on a tie), else the generic name.
+ */
+export function crashNameKey(peakYear: number): Key {
+  let best: number | undefined
+  for (const year of CRASH_YEARS) {
+    const distance = Math.abs(year - peakYear)
+    if (distance > 1) continue
+    const bestDistance = best === undefined ? Infinity : Math.abs(best - peakYear)
+    if (distance < bestDistance || (distance === bestDistance && year > best!)) best = year
+  }
+  return best === undefined ? 'crashName.generic' : (`crashName.${best}` as Key)
+}
+
 export { money, percent, signed } from './format'

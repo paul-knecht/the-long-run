@@ -57,7 +57,7 @@ export const de: Record<keyof typeof en, string> = {
 
   // Herr Keller: the bank's managed fund
   'event.keller.from': 'Herr Keller · deine Bank',
-  'event.keller.text': 'Guten Tag! Schön, wie sich Ihr Konto entwickelt. Sie kommen jetzt für unseren aktiv gemanagten Fonds infrage, unsere Experten wählen die Aktien für Sie aus. Nur 5 % Ausgabeaufschlag und 1,8 % im Jahr. Soll ich Ihren ETF umschichten?',
+  'event.keller.text': 'Guten Tag! Schön, wie sich Ihr Konto entwickelt. Für Sie hätte ich jetzt etwas Besonderes: unseren aktiv gemanagten Fonds, bei dem unsere Experten die Aktien für Sie auswählen. Nur 5 % Ausgabeaufschlag und 1,8 % im Jahr. Soll ich Ihren ETF in den Fonds umschichten?',
   'event.keller.reply.follow': 'Ja, schichten Sie um',
   'event.keller.reply.decline': 'Nein danke, ich bleibe beim ETF',
   'event.keller.after.follow': 'Wunderbar, ich kümmere mich um alles. Die Unterlagen kommen per Post.',
@@ -73,7 +73,7 @@ export const de: Record<keyof typeof en, string> = {
 
   // The unexpected bill
   'event.bill.from': 'Autowerkstatt',
-  'event.bill.text': 'Schlechte Nachrichten zu deinem Auto: neue Kupplung und neue Bremsen. Macht zusammen {amount}.',
+  'event.bill.text': 'Schlechte Nachrichten zum Auto: neue Kupplung und neue Bremsen. Macht zusammen {amount}.',
   'event.bill.text.covered': 'Du zahlst sie von deinem Tagesgeld.',
   'event.bill.text.sold': 'Dein Tagesgeld reicht nicht ganz, deshalb werden Anlagen für {amount} zum aktuellen Kurs verkauft.',
   'event.bill.reply.ok': 'Rechnung bezahlen',
@@ -116,7 +116,7 @@ export const de: Record<keyof typeof en, string> = {
 
   // A headline after each year, picked by how the year went
   'headline.tag': 'Schlagzeile',
-  'headline.up.1': 'Börse auf Rekordhoch. Taxifahrer geben Aktientipps.',
+  'headline.up.1': 'Die Kurse steigen und steigen. Taxifahrer geben Aktientipps.',
   'headline.up.2': 'Analysten: „Die Rally hat noch viel Luft nach oben.“',
   'headline.up.3': 'Alle wollen rein: Aktienkäufe auf Rekordniveau.',
   'headline.flat.1': 'Die Börse tritt auf der Stelle. Händler gähnen.',
@@ -138,7 +138,7 @@ export const de: Record<keyof typeof en, string> = {
   'ending.line.fundOnly': 'Alles in Herrn Kellers Fonds',
   'ending.line.cashOnly': 'Nur Tagesgeld',
   'ending.reveal.tag': 'Aufgelöst',
-  'ending.reveal.us': 'Du hast gerade {from} bis {to} am US-Aktienmarkt erlebt. Die Beträge waren US-Dollar, dir als Euro angezeigt und nicht inflationsbereinigt. Ein weltweiter ETF verteilt dieselbe Idee auf viel mehr Länder.',
+  'ending.reveal.us': 'Du hast gerade die Jahre {from} bis {to} am US-Aktienmarkt erlebt. Die Kurse liefen in US-Dollar und wurden dir als Euro angezeigt, nichts davon ist inflationsbereinigt. Ein weltweiter ETF verteilt dieselbe Idee auf viel mehr Länder.',
   'ending.reveal.world': 'Du hast gerade {from} bis {to} am weltweiten Aktienmarkt erlebt. Die Beträge waren nicht inflationsbereinigt.',
   'ending.reveal.crashes': 'Was dich erwischt hat, war echt:',
   'ending.reveal.crash': '{name}, {depth} unter dem Höchststand',
@@ -156,27 +156,28 @@ export const de: Record<keyof typeof en, string> = {
   // Lesson cards: what you did, the other path in your run, and what all the history shows
   'card.label.you': 'Du',
   'card.label.other': 'Der andere Weg',
-  'card.label.history': 'Über alle Jahre',
+  'card.label.history': 'Über dein Spiel hinaus',
 
   'card.time.title': 'Zeit ist der Risikoregler',
   'card.time.you.fell': 'Im schlimmsten Moment hatte die Börse {drop} von deinem Geld weggefressen. Nach {months} Monaten war das wieder aufgeholt.',
+  'card.time.you.fellOne': 'Im schlimmsten Moment hatte die Börse {drop} von deinem Geld weggefressen. Nach nur einem Monat war das wieder aufgeholt.',
   'card.time.you.notBack': 'Im schlimmsten Moment hatte die Börse {drop} von deinem Geld weggefressen, und bis zum Ende war das noch nicht ganz aufgeholt.',
-  'card.time.you.noFall': 'Dein Geld ist nie gefallen, weil nichts davon an der Börse lag.',
+  'card.time.you.noFall': 'Dein Geld ist nie gefallen, weil wenig oder nichts davon an der Börse lag.',
   'card.time.other': 'Geld, das du in ein paar Jahren brauchst, kann ein Crash erwischen, ohne dass Zeit zum Erholen bleibt. Geld, das warten kann, hat die Zeit auf seiner Seite.',
-  'card.time.history.never15': 'In allen Jahren, die dieses Spiel kennt, hat kein Zeitraum von 15 Jahren oder mehr mit Verlust geendet. Das ist Geschichte, keine Garantie.',
-  'card.time.history.lost': 'In allen Jahren, die dieses Spiel kennt, dauerte der längste Zeitraum, der noch mit Verlust endete, {years} Jahre, und jeder längere endete im Plus. Das ist Geschichte, keine Garantie.',
+  'card.time.history.never15': 'In allen Jahren, die dieses Spiel kennt, hat jeder, der 15 Jahre oder länger investiert blieb, im Plus geendet. Das ist Geschichte, keine Garantie.',
+  'card.time.history.lost': 'In allen Jahren, die dieses Spiel kennt, war die längste Haltedauer, die noch mit Verlust endete, {years} Jahre; jede längere endete im Plus. Das ist Geschichte, keine Garantie.',
 
   'card.lumpSum.title': 'Alles auf einmal oder nach und nach',
   'card.lumpSum.you.lump': 'Du hast Omas Geld auf einmal investiert.',
   'card.lumpSum.you.spread': 'Du hast Omas Geld über 12 Monate verteilt investiert.',
   'card.lumpSum.you.cash': 'Du hast Omas Geld auf dem Tagesgeld gelassen.',
   'card.lumpSum.other': 'In deinem Spiel landest du mit allem auf einmal bei {lump}, über 12 Monate verteilt bei {spread}.',
-  'card.lumpSum.history': 'In allen Jahren, die dieses Spiel kennt, schlug alles auf einmal das Verteilen über 12 Monate bei {pct} aller Startzeitpunkte: meistens also, aber nicht jedes Mal. Verteilen schont die Nerven, und ein Sparplan macht genau das.',
+  'card.lumpSum.history': 'In allen Jahren, die dieses Spiel kennt, lag die Einmalanlage in {pct} aller Startmonate vor dem Verteilen über 12 Monate: meistens also, aber nicht jedes Mal. Verteilen schont die Nerven, und ein Sparplan macht genau das.',
 
   'card.savingsRate.title': 'Wie viel du zurücklegst',
   'card.savingsRate.you': 'Im Schnitt hast du {rate} deines Einkommens zurückgelegt. Insgesamt hast du {paidIn} eingezahlt.',
   'card.savingsRate.other': 'Mit 15 % in jedem Jahr endet dasselbe Spiel bei {at15}.',
-  'card.savingsRate.history': 'Peil 10 bis 20 % deines Einkommens an, jeden Monat. Das ist der eine Regler, den du ganz in der Hand hast.',
+  'card.savingsRate.history': 'Peil 10 bis 20 % deines Einkommens an, jeden Monat. Das ist der Teil, den du in der Hand hast, egal was die Börse macht.',
 
   'card.split.title': 'Risiko ist eine Aufteilung',
   'card.split.you': 'Im Schnitt ging {share} deines neuen Geldes an die Börse. Dein tiefster Absturz: {yourDrop}.',
@@ -187,13 +188,13 @@ export const de: Record<keyof typeof en, string> = {
   'card.costs.you.followed': 'Du bist in Herrn Kellers Fonds gewechselt: 5 % beim Einstieg, 1,8 % jedes Jahr.',
   'card.costs.you.declined': 'Du hast Herrn Keller abgesagt und bist beim ETF für 0,2 % im Jahr geblieben.',
   'card.costs.other': 'Gleiches Geld, gleiche Börse: Alles im ETF ergibt am Ende {etf}, alles in seinem Fonds {fund}.',
-  'card.costs.history': 'In diesem Spiel folgt der Fonds derselben Börse, der Unterschied besteht also nur aus Kosten.Weltweite ETFs kosten rund 0,05 bis 0,2 % im Jahr; schau auf diese Zahl, bevor du kaufst.',
+  'card.costs.history': 'In diesem Spiel folgt der Fonds derselben Börse, der Unterschied besteht also nur aus Kosten. Weltweite ETFs kosten rund 0,05 bis 0,2 % im Jahr; schau auf diese Zahl, bevor du kaufst.',
 
-  'card.stock.title': 'Eine Aktie oder Tausende',
+  'card.stock.title': 'Eine Aktie oder tausend',
   'card.stock.you.followed': "Du hast die Hälfte deines ETFs in Jonas' Aktie gesteckt.",
   'card.stock.you.declined': "Du hast Jonas' Tipp ausgelassen.",
   'card.stock.other': "Von Jonas' Tipp bis zum Ende wurden aus 100 € in seiner Aktie {stock} und aus 100 € im ETF {etf}.",
-  'card.stock.history': 'Wir haben deine Jahre mit 100 Aktien wie seiner nachgespielt, {beat} davon schlugen den ETF. Ein paar Einzelaktien gewinnen groß, die meisten bleiben hinter dem Markt zurück, und ein ETF hält Tausende.',
+  'card.stock.history': 'Wir haben deine Jahre mit 100 Aktien wie seiner nachgespielt: {beat} davon schlugen den ETF. Ein paar Einzelaktien hängen den Markt weit ab, die meisten bleiben hinter ihm zurück, und ein weltweiter ETF hält über tausend.',
 
   'card.emergency.title': 'Der Notgroschen',
   'card.emergency.you.covered': 'Als die Werkstattrechnung kam, hat dein Tagesgeld sie bezahlt, und deine Anlagen blieben, wo sie waren.',
@@ -201,13 +202,14 @@ export const de: Record<keyof typeof en, string> = {
   'card.emergency.other': 'Mit drei Monatsgehältern auf dem Tagesgeld ist eine Rechnung einfach eine Rechnung. Ohne sie wird verkauft, zu dem Kurs, den die Börse in dem Monat gerade zeigt.',
   'card.emergency.history': 'Deshalb kommt der Notgroschen zuerst: Mit ihm kannst du deine Anlagen in Ruhe lassen, wenn das Leben teuer wird oder die Börse abstürzt.',
 
-  // The real crashes, by the year the market peaked; the ending matches within a year
+  // The real crashes, by the year the market peaked; crashNameKey (index.ts) picks one for a peak year
   'crashName.1876': 'Die Lange Depression der 1870er-Jahre',
   'crashName.1893': 'Die Panik von 1893',
   'crashName.1902': 'Die Börsenpanik von 1903',
   'crashName.1907': 'Die Bankenpanik von 1907',
   'crashName.1916': 'Der Kurseinbruch im Ersten Weltkrieg 1917',
   'crashName.1929': 'Der Börsenkrach von 1929 und die Weltwirtschaftskrise',
+  'crashName.1930': 'Der Absturz in die Weltwirtschaftskrise 1930 bis 1932',
   'crashName.1931': 'Der Tiefpunkt der Weltwirtschaftskrise',
   'crashName.1937': 'Die Rezession von 1937/38',
   'crashName.1968': 'Der Bärenmarkt von 1969/70',
@@ -224,7 +226,7 @@ export const de: Record<keyof typeof en, string> = {
   'practice.intro': 'Richte ihn einmal zur Übung ein, dann kommt dir der echte bekannt vor. Hier fließt kein echtes Geld.',
   'practice.what': 'Was kaufen',
   'practice.option.world': 'Weltweiter Aktienindex-ETF',
-  'practice.option.world.note': 'Tausende Unternehmen weltweit · rund 0,05 bis 0,2 % im Jahr',
+  'practice.option.world.note': 'Über tausend Unternehmen weltweit · rund 0,05 bis 0,2 % im Jahr',
   'practice.option.theme': 'Themen-ETF KI & Robotik',
   'practice.option.theme.note': 'Ein paar Dutzend Firmen, ein einziger Trend',
   'practice.option.fund': 'Gemanagter Fonds deiner Bank',
@@ -253,10 +255,11 @@ export const de: Record<keyof typeof en, string> = {
   // Small print, at the end of the ending and the practice step
   'smallprint.advice': 'Dieses Spiel dient der Bildung und ist keine Anlageberatung.',
   'smallprint.past': 'Vergangene Entwicklungen sind keine Garantie für die Zukunft.',
-  'smallprint.inflation': 'Die Beträge sind nicht inflationsbereinigt: Die Gehälter sind in heutigem Geld, auch wenn die Jahre lange zurückliegen.',
+  'smallprint.inflation': 'Die Beträge sind nicht inflationsbereinigt: Die Gehälter sind in heutigem Geld, auch wenn die gespielten Jahre lange zurückliegen.',
   'smallprint.taxes': 'Steuern lässt das Spiel weg.',
-  'smallprint.data': 'Die Geschichte ist der US-Aktienmarkt mit wieder angelegten Dividenden, in US-Dollar, als Euro angezeigt; Wechselkurse sind nicht berücksichtigt. Ein weltweiter ETF verteilt dieselbe Idee auf viel mehr Länder.',
-  'smallprint.savings': 'Das Tagesgeld bekommt näherungsweise den langfristigen US-Zins desselben Monats minus einen Prozentpunkt.',
+  'smallprint.data': 'Die Kurse stammen vom US-Aktienmarkt, mit wieder angelegten Dividenden, in US-Dollar und als Euro angezeigt; Wechselkurse sind nicht berücksichtigt. Ein weltweiter ETF verteilt dieselbe Idee auf viel mehr Länder.',
+  'smallprint.savings': 'Das Tagesgeld bekommt näherungsweise den langfristigen US-Zins desselben Monats minus einen Prozentpunkt, nie weniger als null.',
+  'smallprint.monthly': 'Die Kurse sind Monatsdurchschnitte, die heftigsten Tage sind darin geglättet.',
   'smallprint.costs': 'Im Spiel kostet der ETF 0,2 % im Jahr; Herrn Kellers Fonds nimmt 5 % Ausgabeaufschlag und 1,8 % im Jahr.',
   'smallprint.credit': 'Marktdaten: Robert Shiller, über DataHub.',
 }

@@ -1,7 +1,7 @@
 import { de } from './de'
 import { en } from './en'
 import { money, percent, signed } from './format'
-import { detectLang, t, type Key } from './index'
+import { crashNameKey, detectLang, t, type Key } from './index'
 
 // The brief's tests, verbatim.
 
@@ -66,6 +66,15 @@ test('detectLang picks German for any German locale, English otherwise', () => {
   expect(detectLang('')).toBe('en')
 })
 
+test('crashNameKey: an exact year, else the nearest within a year (the later on a tie), else generic', () => {
+  expect(crashNameKey(1930)).toBe('crashName.1930')
+  expect(crashNameKey(1929)).toBe('crashName.1929')
+  expect(crashNameKey(2001)).toBe('crashName.2002')
+  expect(crashNameKey(1988)).toBe('crashName.1987')
+  expect(crashNameKey(1906)).toBe('crashName.1907')
+  expect(crashNameKey(1950)).toBe('crashName.generic')
+})
+
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false
 
 test('German is typed by the English keys, so a missing or extra key does not compile', () => {
@@ -123,6 +132,7 @@ const required = [
   'ending.toPractice',
   ...['time', 'lumpSum', 'savingsRate', 'split', 'costs', 'stock', 'emergency'].flatMap((id) => [`card.${id}.title`, `card.${id}.other`]),
   'card.time.you.fell',
+  'card.time.you.fellOne',
   'card.time.you.notBack',
   'card.time.you.noFall',
   'card.time.history.never15',
@@ -144,7 +154,7 @@ const required = [
   'card.emergency.you.covered',
   'card.emergency.you.sold',
   'card.emergency.history',
-  ...['1907', '1929', '1937', '1973', '2000', '2007', 'generic'].map((y) => `crashName.${y}`),
+  ...['1907', '1929', '1930', '1937', '1973', '2000', '2007', 'generic'].map((y) => `crashName.${y}`),
   'practice.option.world',
   'practice.option.theme',
   'practice.option.fund',
@@ -153,6 +163,7 @@ const required = [
   'practice.amount',
   'practice.start',
   'smallprint.advice',
+  'smallprint.monthly',
   'smallprint.credit',
 ]
 
@@ -164,6 +175,7 @@ test('placeholders the screens rely on', () => {
   const ph = (k: Key) => (en[k].match(/\{\w+\}/g) ?? []).sort().join()
   expect(ph('header.year')).toBe('{n},{of}')
   expect(ph('card.time.you.fell')).toBe('{drop},{months}')
+  expect(ph('card.time.you.fellOne')).toBe('{drop}')
   expect(ph('card.time.you.notBack')).toBe('{drop}')
   expect(ph('card.time.you.noFall')).toBe('')
   expect(ph('card.time.history.never15')).toBe('')
@@ -181,6 +193,11 @@ const both = [...entries(en), ...entries(de)]
 
 test('no em or en dashes', () => {
   for (const [k, v] of both) expect(v, k).not.toMatch(/[\u2013\u2014]/)
+})
+
+test('a space follows sentence punctuation', () => {
+  // Excepted: the "Mr." abbreviation.
+  for (const [k, v] of both) expect(v.replace(/\bMr\./g, 'Mr'), k).not.toMatch(/[a-z\u00e4\u00f6\u00fc\u00df][.!?;:,][A-Za-z\u00c4\u00d6\u00dc\u00e4\u00f6\u00fc]/)
 })
 
 test('no verdicts outside the ending cards', () => {
