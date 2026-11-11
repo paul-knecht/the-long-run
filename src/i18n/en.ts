@@ -140,7 +140,7 @@ export const en = {
   'ending.lines': "Your path and the ones you didn't take",
   'ending.line.you': 'You',
   'ending.line.held': 'If you had held',
-  'ending.line.sold': 'If you had sold in the crash',
+  'ending.line.sold': 'If you had sold and stayed out',
   'ending.line.etfOnly': 'Everything in the ETF',
   'ending.line.fundOnly': "Everything in Mr. Keller's fund",
   'ending.line.cashOnly': 'Savings account only',

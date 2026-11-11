@@ -117,6 +117,8 @@ test('the chart draws every path over all 241 months: yours as the main line, th
 })
 
 test('the legend names each line with its final amount, yours first, then the emphasised paths, then the rest', () => {
+  expect(en['ending.line.sold']).toBe('If you had sold and stayed out')
+  expect(de['ending.line.sold']).toBe('Wenn du verkauft hättest und draußen geblieben wärst')
   renderEnding(model)
   const rows = within(screen.getByRole('list', { name: en['ending.lines'] })).getAllByRole('listitem')
   const others = [...model.lines.filter((l) => l.emphasised), ...model.lines.filter((l) => !l.emphasised)]
@@ -136,7 +138,7 @@ test('selling in the crash shows "If you had held" instead of "If you had sold"'
   renderEnding(buildEnding(market, setup, [...yearly(20, 0.15, 0.7), { kind: 'crash', at: setup.takeovers[0], choice: 'sell' }]))
   const legend = screen.getByRole('list', { name: en['ending.lines'] })
   expect(within(legend).getByText('If you had held')).toBeInTheDocument()
-  expect(within(legend).queryByText('If you had sold in the crash')).toBeNull()
+  expect(within(legend).queryByText('If you had sold and stayed out')).toBeNull()
 })
 
 // The reveal.

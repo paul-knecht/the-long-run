@@ -140,7 +140,7 @@ export const de: Record<keyof typeof en, string> = {
   'ending.lines': 'Dein Weg und die, die du nicht gegangen bist',
   'ending.line.you': 'Du',
   'ending.line.held': 'Wenn du gehalten hättest',
-  'ending.line.sold': 'Wenn du im Crash verkauft hättest',
+  'ending.line.sold': 'Wenn du verkauft hättest und draußen geblieben wärst',
   'ending.line.etfOnly': 'Alles im ETF',
   'ending.line.fundOnly': 'Alles in Herrn Kellers Fonds',
   'ending.line.cashOnly': 'Nur Tagesgeld',

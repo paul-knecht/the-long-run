@@ -54,12 +54,43 @@ test('a flipped crash at a year end treats that boundary as later, and drops the
   ])
 })
 
+test('a flip to sell stays out: every later year keeps its save rate and sends new money to savings', () => {
+  const at = 101
+  const log: Decision[] = [
+    ...twoHalves({ saveRate: 0.1, etfShare: 0.7 }, { saveRate: 0.25, etfShare: 0.9 }),
+    { kind: 'crash', at, choice: 'hold' },
+    { kind: 'action', at: 108, action: 'switchBackToEtf' },
+  ]
+  const out = flip(log, { kind: 'crash', at }, 'sell')
+  for (const y of out.filter((d) => d.kind === 'year')) {
+    expect(y).toEqual({ kind: 'year', at: y.at, saveRate: y.at < 120 ? 0.1 : 0.25, etfShare: y.at < at ? 0.7 : 0 })
+  }
+  expect(out.filter((d) => d.kind === 'action')).toEqual([])
+  expect(out.filter((d) => d.kind === 'crash')).toEqual([{ kind: 'crash', at, choice: 'sell' }])
+})
+
 test('a flipped crash with no earlier year takes the starting split; one with no later year adds none', () => {
   const late: Decision[] = [{ kind: 'year', at: 120, saveRate: 0.2, etfShare: 0.9 }]
-  expect(flip(late, { kind: 'crash', at: 50 }, 'sell').filter((d) => d.kind === 'year')).toEqual([
+  expect(flip(late, { kind: 'crash', at: 50 }, 'hold').filter((d) => d.kind === 'year')).toEqual([
     { kind: 'year', at: 120, saveRate: 0.2, etfShare: START_DIALS.etfShare },
   ])
+  expect(flip(late, { kind: 'crash', at: 50 }, 'sell').filter((d) => d.kind === 'year')).toEqual([{ kind: 'year', at: 120, saveRate: 0.2, etfShare: 0 }])
   expect(flip([], { kind: 'crash', at: 50 }, 'sell')).toEqual([{ kind: 'crash', at: 50, choice: 'sell' }])
+})
+
+test('the sold line: a holder who never moved the dials is shown selling and staying out (seed 56)', () => {
+  // Seed 56 takes over at month 43. 15% saved, 70% to the ETF throughout.
+  const fiftySix = createSetup(market, 56)
+  expect(fiftySix.takeovers[0]).toBe(43)
+  const log = yearly(20, 0.15, 0.7)
+  const sold = alternatives(fiftySix, log).find((a) => a.id === 'sold')!
+  expect(Math.round(sold.final)).toBe(160956)
+  // From the crash on the savings go to the savings account: nothing is invested until Grandma's money
+  // at month 168, which the player's own later choice (invest at once) still puts into the ETF.
+  const run = simulate(fiftySix, flip(log, { kind: 'crash', at: 43 }, 'sell'), 'auto')
+  const out = run.snapshots.slice(43, fiftySix.schedule.windfall)
+  expect(out.every((s) => s.holdings.etf === 0 && s.holdings.fund === 0 && s.holdings.stock === 0)).toBe(true)
+  expect(run.snapshots[fiftySix.schedule.windfall].holdings.etf).toBe(10000)
 })
 
 test('a flipped event changes only that choice: every later dial and action stays', () => {

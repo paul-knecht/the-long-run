@@ -22,10 +22,12 @@ type YearDecision = Extract<Decision, { kind: 'year' }>
  * The log with one choice changed: the logged decision for the target is replaced, or added when
  * the log holds none (auto mode would have filled it in). The player's save rate in every year is
  * kept, so the money going in is theirs.
- * - A crash: every `year` decision from the crash's month on keeps its save rate but takes the split
- *   in force just before the crash, which is the split of the last `year` decision before it (the
- *   starting split if there is none); the actions from the crash's month on are dropped; every other
- *   event and crash choice stays. A crash in a year's last month comes before that boundary's year.
+ * - A crash: every `year` decision from the crash's month on keeps its save rate but takes a frozen
+ *   split. Selling means staying out, so after a sale that split is 0 (new money goes to the savings
+ *   account, as the sale itself does); otherwise it is the split in force just before the crash, the
+ *   one of the last `year` decision before it (the starting split if there is none). The actions from
+ *   the crash's month on are dropped, so a seller never gets back in; every other event and crash
+ *   choice stays. A crash in a year's last month comes before that boundary's year.
  * - An event: only that choice changes; the rest of the log stays as it is.
  */
 export function flip(decisions: Decision[], target: Extract<FlipTarget, { kind: 'crash' }>, choice: CrashChoice): Decision[]
@@ -41,7 +43,7 @@ export function flip(decisions: Decision[], target: FlipTarget, choice: CrashCho
     (last, d) => (d.kind === 'year' && d.at < target.at && (!last || d.at > last.at) ? d : last),
     undefined,
   )
-  const { etfShare } = dialsOf(before ?? START_DIALS)
+  const etfShare = choice === 'sell' ? 0 : dialsOf(before ?? START_DIALS).etfShare
   const rest = decisions.flatMap((d): Decision[] => {
     if (d.kind === 'crash' && d.at === target.at) return []
     if (d.kind === 'action' && d.at >= target.at) return []
