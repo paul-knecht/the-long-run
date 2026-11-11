@@ -101,12 +101,13 @@ export function simulate(
   })
 
   /**
-   * Moves the ETF and the fund to cash and remembers the split to return to (the first one, if already
-   * parked). A windfall still being spread stops; what is left of it stays in cash.
+   * Moves everything invested (the ETF, the fund and the single stock) to cash and remembers the
+   * amount and the split to return to (the first split, if already parked). A windfall still being
+   * spread stops; what is left of it stays in cash.
    */
   const park = (): void => {
-    const amount = holdings.etf + holdings.fund
-    holdings = move(move(holdings, 'etf', 'cash', holdings.etf), 'fund', 'cash', holdings.fund)
+    const amount = holdings.etf + holdings.fund + holdings.stock
+    holdings = move(move(move(holdings, 'etf', 'cash', holdings.etf), 'fund', 'cash', holdings.fund), 'stock', 'cash', holdings.stock)
     parked = { amount: (parked?.amount ?? 0) + amount, etfShare: parked ? parked.etfShare : dials.etfShare }
     dials = { ...dials, etfShare: 0 }
     spreadLeft = 0

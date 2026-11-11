@@ -125,6 +125,16 @@ test('the sold line stays out even when the player bought more at a later crash 
   expect(run.flows).toEqual(simulate(four, log, 'auto').flows)
 })
 
+test("the sold line sells Jonas's stock too, and stays out (seed 3)", () => {
+  // Seed 3: Jonas at month 72, the takeover at 179; the player follows Jonas and holds.
+  const log: Decision[] = [...yearly(20, 0.15, 0.7), { kind: 'event', at: setup.schedule.jonas, event: 'jonas', choice: 'follow' }]
+  const at = setup.takeovers[0]
+  expect(simulate(setup, log, 'auto').snapshots[at].holdings.stock).toBeGreaterThan(0)
+  const run = simulate(setup, flip(setup, log, { kind: 'crash', at }, 'sell'), 'auto')
+  expect(alternatives(setup, log).find((a) => a.id === 'sold')!.totals).toEqual(run.snapshots.map((s) => s.total))
+  expect(run.snapshots.slice(at).every((s) => invested(s.holdings) === 0)).toBe(true)
+})
+
 test('a player who sold at both crashes is shown holding at both (seed 1)', () => {
   // Seed 1 takes over at months 101 and 149; the player sells at both, getting back in between.
   const one = createSetup(market, 1)

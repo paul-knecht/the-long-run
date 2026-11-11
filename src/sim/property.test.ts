@@ -1,7 +1,6 @@
 import { market } from '../data'
 import { MONTHS } from './constants'
 import { buildEnding } from './ending'
-import { empty, grow } from './portfolio'
 import { alternatives, flip } from './replay'
 import { createRng, type Rng } from './rng'
 import { createSetup } from './setup'
@@ -101,17 +100,10 @@ test('on random runs the sold line puts nothing into the market from the sale to
     const at = setup.takeovers[0]
     const run = simulate(setup, flip(setup, decisions, { kind: 'crash', at }, 'sell'), 'auto')
     expect(sold.totals, `seed ${seed}`).toEqual(run.snapshots.map((s) => s.total))
-    // The ETF and the fund are empty from the sale on. Jonas's stock is not sold by a sale (the
-    // player's own sale keeps it too): it stays as it was and only moves with the market.
-    expect(run.snapshots[at].holdings.stock, `seed ${seed}`).toBe(simulate(setup, decisions, 'auto').snapshots[at].holdings.stock)
-    for (let m = at; m <= MONTHS; m++) {
-      const { etf, fund, stock } = run.snapshots[m].holdings
-      expect(etf + fund, `seed ${seed}, month ${m}: ETF ${etf}, fund ${fund}`).toBe(0)
-      if (m === at) continue
-      const r = setup.returns[m - 1]
-      const before = run.snapshots[m - 1].holdings.stock
-      const grown = grow({ ...empty(), stock: before }, { stock: r.stock, cash: r.cash, stockExtra: setup.stockAlpha / 12 + setup.stockNoise[m - 1] }).stock
-      expect(stock, `seed ${seed}, month ${m}: stock ${stock} after ${before}`).toBeLessThanOrEqual(grown)
+    // The sale takes everything invested to the savings account, Jonas's stock included, and nothing goes back.
+    for (const s of run.snapshots.slice(at)) {
+      const { etf, fund, stock } = s.holdings
+      expect(etf + fund + stock, `seed ${seed}, month ${s.month}: ETF ${etf}, fund ${fund}, stock ${stock}`).toBe(0)
     }
     checked++
   }

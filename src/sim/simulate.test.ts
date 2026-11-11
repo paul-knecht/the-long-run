@@ -312,9 +312,9 @@ test('selling in a crash while parked adds to the parked amount and keeps the sp
 
   const post = simulate(s, [...log, crash(30, 'sell')])
   expect(post.pending).toEqual({ kind: 'event', at: 36, event: 'jonas' })
-  expect(post.snapshots[30].holdings).toMatchObject({ etf: 0, fund: 0 })
-  expect(post.snapshots[30].holdings.cash).toBeCloseTo(h.cash + h.etf + h.fund)
-  expect(post.parked!.amount).toBeCloseTo(pre.parked!.amount + h.etf + h.fund)
+  expect(post.snapshots[30].holdings).toMatchObject({ etf: 0, fund: 0, stock: 0 })
+  expect(post.snapshots[30].holdings.cash).toBeCloseTo(h.cash + h.etf + h.fund + h.stock)
+  expect(post.parked!.amount).toBeCloseTo(pre.parked!.amount + h.etf + h.fund + h.stock)
   expect(post.parked!.etfShare).toBe(0.5)
   expect(post.dials.etfShare).toBe(0)
   expect(post.riskyTarget).toBe('fund')
@@ -324,6 +324,37 @@ test('selling in a crash while parked adds to the parked amount and keeps the sp
   expect(back.pending).toEqual({ kind: 'year', at: 36, actions: ['switchBackToEtf'] })
   expect(back.snapshots[36].holdings.fund).toBeCloseTo(post.parked!.amount * (1 - FUND_ENTRY_FEE))
   expect(back.dials.etfShare).toBe(0.5)
+})
+
+test('selling moves everything invested to the savings account, the stock too; getting back in returns all of it', () => {
+  // Jonas at month 36, a crash at 40, the bill late enough to stay out of the way.
+  const s = quiet({ takeovers: [40], schedule: { ...Q, bill: 108 } })
+  const log = [year(0, 0.2, 1), ev('werner', 'decline'), year(12, 0.2, 1), ev('keller', 'decline'), year(24, 0.2, 1), ev('jonas', 'follow'), year(36, 0.2, 1)]
+  const pre = simulate(s, log)
+  expect(pre.pending).toMatchObject({ kind: 'crash', at: 40 })
+  const h = pre.snapshots[40].holdings
+  expect(h.etf).toBeGreaterThan(0)
+  expect(h.stock).toBeGreaterThan(0)
+
+  const post = simulate(s, [...log, crash(40, 'sell')])
+  expect(post.snapshots[40].holdings).toEqual({ cash: h.cash + h.etf + h.stock, etf: 0, fund: 0, stock: 0 })
+  expect(post.parked).toEqual({ amount: h.etf + h.stock, etfShare: 1 })
+  // Nothing left to sell back into the ETF: only getting back in is on offer.
+  expect(post.pending).toEqual({ kind: 'year', at: 48, actions: ['getBackIn'] })
+
+  const back = simulate(s, [...log, crash(40, 'sell'), act(48, 'getBackIn')])
+  expect(back.snapshots[48].holdings.etf).toBeCloseTo(h.etf + h.stock, 9)
+  expect(back.snapshots[48].holdings.stock).toBe(0)
+  expect(back.parked).toBeNull()
+
+  // Uncle Werner's "all of it into savings" is the same sale: here Jonas comes first, Werner a year later.
+  const early = quiet({ schedule: { ...Q, jonas: 12, werner: 24, keller: 36 } })
+  const upToWerner = [year(0, 0.2, 1), { kind: 'event', at: 12, event: 'jonas', choice: 'follow' } as Decision, year(12, 0.2, 1)]
+  const w = simulate(early, upToWerner).snapshots[24].holdings
+  expect(w.stock).toBeGreaterThan(0)
+  const parked = simulate(early, [...upToWerner, { kind: 'event', at: 24, event: 'werner', choice: 'follow' }])
+  expect(parked.snapshots[24].holdings).toEqual({ cash: w.cash + w.etf + w.stock, etf: 0, fund: 0, stock: 0 })
+  expect(parked.parked!.amount).toBeCloseTo(w.etf + w.stock, 9)
 })
 
 test('following Mr. Keller moves the ETF into the fund; switchBackToEtf moves it back without a fee', () => {

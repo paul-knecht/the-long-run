@@ -39,9 +39,9 @@ const STAY_OUT: readonly { event: EventId; choice: EventChoice }[] = [
  *   last `year` decision before it (the starting split if there is none). Later events stay.
  * - Flipped to sell, the seller stays out: the frozen split is 0, so new money goes to the savings
  *   account. Every later offer from Uncle Werner, Mr. Keller and Jonas is declined, and Grandma's
- *   money is left in the savings account, whether those events were logged or not. From the sale on
- *   the ETF and the fund hold nothing; Jonas's stock, which a sale does not sell (the player's own
- *   sale keeps it too), stays as it was and only moves with the market.
+ *   money is left in the savings account, whether those events were logged or not. The sale takes
+ *   everything invested (ETF, fund and Jonas's stock) to the savings account, so from the sale to
+ *   the end nothing is invested.
  *
  * An event: only that choice changes; the rest of the log stays as it is.
  */
