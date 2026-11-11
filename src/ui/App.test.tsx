@@ -1,0 +1,90 @@
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { App } from './App'
+import { Header } from './components/Header'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+test('start screen leads into year 1', async () => {
+  render(<App seed={3} instant cooldownMs={0} />); await userEvent.click(screen.getByRole('button', { name: /start/i }));
+  expect(screen.getByText(/year 1/i)).toBeInTheDocument();
+});
+test('language switch keeps the run', async () => {             // Review Focus 4
+  render(<App seed={3} instant cooldownMs={0} />); await userEvent.click(screen.getByRole('button', { name: /start/i }));
+  await userEvent.click(screen.getByRole('button', { name: 'DE' }));
+  expect(screen.getByText(/jahr 1/i)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'EN' }));
+  expect(screen.getByText(/year 1/i)).toBeInTheDocument();
+});
+test('no calendar year is visible while playing', async () => {
+  const { container } = render(<App seed={3} instant cooldownMs={0} />); await userEvent.click(screen.getByRole('button', { name: /start/i }));
+  expect(container.textContent).not.toMatch(/\b(18|19|20)\d\d\b/);
+});
+
+test('the start screen shows the title, the pitch and the advice note, and gives away neither market nor years', () => {
+  const { container } = render(<App seed={3} instant cooldownMs={0} />)
+  expect(screen.getByRole('heading', { name: 'The Long Run' })).toBeInTheDocument()
+  expect(screen.getByText(/your first salary just landed: €2,200 a month/i)).toBeInTheDocument()
+  expect(screen.getByText(/education, not investment advice/i)).toBeInTheDocument()
+  expect(container.textContent).not.toMatch(/\b(18|19|20)\d\d\b/)
+  expect(container.textContent).not.toMatch(/\bUS\b|S&P|Shiller|America/i)
+})
+
+test('the language can be switched on the start screen, and the switch shows which one is on', async () => {
+  render(<App seed={3} instant cooldownMs={0} />)
+  expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'DE' })).toHaveAttribute('aria-pressed', 'false')
+  await userEvent.click(screen.getByRole('button', { name: 'DE' }))
+  expect(screen.getByRole('heading', { name: 'Auf lange Sicht' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'DE' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-pressed', 'false')
+  expect(document.documentElement.lang).toBe('de')
+})
+
+test('the starting language follows the browser', () => {
+  vi.spyOn(navigator, 'language', 'get').mockReturnValue('de-AT')
+  render(<App seed={3} instant cooldownMs={0} />)
+  expect(screen.getByRole('heading', { name: 'Auf lange Sicht' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'DE' })).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('the game starts from the keyboard', async () => {
+  render(<App seed={3} instant cooldownMs={0} />)
+  const start = screen.getByRole('button', { name: /start/i })
+  for (let i = 0; i < 5 && document.activeElement !== start; i++) await userEvent.tab()
+  expect(start).toHaveFocus()
+  await userEvent.keyboard('{Enter}')
+  expect(screen.getByText(/year 1/i)).toBeInTheDocument()
+})
+
+test('year 1 shows the age, an empty total and the chart', async () => {
+  render(<App seed={3} instant cooldownMs={0} />); await userEvent.click(screen.getByRole('button', { name: /start/i }))
+  expect(screen.getByText('Year 1 of 20')).toBeInTheDocument()
+  expect(screen.getByText('Age 23')).toBeInTheDocument()
+  expect(screen.getByText('€0')).toBeInTheDocument()
+  expect(screen.getByRole('img', { name: 'Your money over the years' })).toBeInTheDocument()
+})
+
+describe('Header', () => {
+  test('shows the year, the age and the total', () => {
+    render(<Header year={3} age={25} total={7960} change={2310} mood="calm" />)
+    expect(screen.getByText('Year 3 of 20')).toBeInTheDocument()
+    expect(screen.getByText('Age 25')).toBeInTheDocument()
+    expect(screen.getByText('€7,960')).toBeInTheDocument()
+  })
+
+  test('a gain carries an up arrow and a loss a down arrow, not only a colour', () => {
+    const { rerender } = render(<Header year={3} age={25} total={7960} change={2310} mood="calm" />)
+    expect(screen.getByText('▲ €2,310 this year')).toBeInTheDocument()
+    rerender(<Header year={7} age={29} total={18420} change={-9480} mood="crash" />)
+    expect(screen.getByText('▼ €9,480 this year')).toBeInTheDocument()
+  })
+
+  test('has the language switch', () => {
+    render(<Header year={1} age={23} total={0} change={0} mood="calm" />)
+    expect(screen.getByRole('button', { name: 'EN' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'DE' })).toBeInTheDocument()
+  })
+})

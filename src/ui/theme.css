@@ -1,0 +1,328 @@
+/* Palette and type from the approved mockups (game-flow.html): dark navy, green gains, red losses,
+   deep red when the market crashes. Mobile first: one column, 16px gutters, 360px wide and up. */
+
+:root {
+  --bg: #0b1220;
+  --future: #0f1930;
+  --surface: #16213a;
+  --surface-strong: #223153;
+  --border: #263556;
+  --text: #e6edf7;
+  --text-dim: #8b9bb4;
+  --gain: #4ade80;
+  --gain-ink: #062012;
+  --loss: #ff6b6b;
+  --loss-ink: #20080a;
+  --cash: #7dd3fc;
+  --tag: #ffb454;
+  --focus: #ffd166;
+
+  --crash-bg: #1a0b10;
+  --crash-future: #230e15;
+  --crash-surface: #2a1219;
+  --crash-surface-strong: #3a1821;
+  --crash-border: #4a1f2a;
+  --crash-text-dim: #d49a9a;
+
+  --gutter: 16px;
+  --radius: 12px;
+  --column: 480px;
+  --chart-max: 900px;
+
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1rem;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+
+h1,
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+/* The mood: the crash turns the whole screen deep red. */
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 0.6s ease;
+}
+
+.app[data-mood='crash'],
+.header[data-mood='crash'] {
+  --bg: var(--crash-bg);
+  --future: var(--crash-future);
+  --surface: var(--crash-surface);
+  --surface-strong: var(--crash-surface-strong);
+  --border: var(--crash-border);
+  --text-dim: var(--crash-text-dim);
+}
+
+.app[data-instant] {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0s !important;
+    animation-duration: 0s !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Layout: one centred column for text and controls; the chart may grow wider. */
+.screen {
+  width: 100%;
+  max-width: var(--column);
+  margin: 0 auto;
+  padding: var(--gutter);
+  padding-bottom: calc(var(--gutter) + env(safe-area-inset-bottom, 0px));
+}
+
+.screen.play {
+  max-width: calc(var(--chart-max) + 2 * var(--gutter));
+}
+
+.play > .header {
+  max-width: var(--column);
+  margin: 0 auto;
+}
+
+/* Buttons: at least 44px tall everywhere. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  min-height: 48px;
+  padding: 12px 20px;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface-strong);
+  color: var(--text);
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+
+.btn:hover {
+  filter: brightness(1.08);
+}
+
+.btn-primary {
+  background: var(--gain);
+  color: var(--gain-ink);
+}
+
+.btn-wide {
+  width: 100%;
+}
+
+/* Language switch: two buttons, the one in use filled. */
+.lang-switch {
+  display: inline-flex;
+  flex: none;
+  gap: 4px;
+}
+
+.lang-button {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.lang-button[aria-pressed='true'] {
+  border-color: var(--surface-strong);
+  background: var(--surface-strong);
+  color: var(--text);
+}
+
+/* Header: year and age, big total, this year's change. */
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.header-when {
+  display: flex;
+  flex-wrap: wrap;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.header-when span + span::before {
+  content: '·';
+  margin: 0 0.5em;
+}
+
+.header-label {
+  margin-top: 6px;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+}
+
+.header-total {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.header-change {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.header-change[data-direction='up'] {
+  color: var(--gain);
+}
+
+.header-change[data-direction='down'] {
+  color: var(--loss);
+}
+
+.header-change[data-direction='flat'] {
+  color: var(--text-dim);
+}
+
+/* Chart: stretches to its box; strokes keep their pixel width. */
+.chart {
+  --chart-line: var(--gain);
+  display: block;
+  width: 100%;
+  max-width: var(--chart-max);
+  height: clamp(160px, 30vh, 300px);
+  margin: 12px auto 0;
+}
+
+.chart[data-mood='crash'] {
+  --chart-line: var(--loss);
+  --future: var(--crash-future);
+  height: clamp(220px, 50vh, 460px);
+}
+
+.chart-future {
+  fill: var(--future);
+}
+
+.chart-baseline {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart-line--main,
+.chart-head {
+  stroke: var(--chart-line);
+}
+
+.chart-head {
+  fill: none;
+}
+
+.chart-line--strong {
+  stroke: var(--cash);
+}
+
+.chart-line--faint {
+  stroke: var(--text-dim);
+  opacity: 0.7;
+}
+
+/* Start screen. */
+.start {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.start-bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.start-title {
+  margin-top: auto;
+  font-size: clamp(2.25rem, 10vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.start-tagline {
+  color: var(--gain);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.start-secret {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.start .btn {
+  margin-top: 8px;
+}
+
+.smallprint {
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+}
+
+.start .smallprint {
+  margin-bottom: auto;
+}
+
+@media (min-width: 768px) {
+  .header-total {
+    font-size: 2.75rem;
+  }
+}
