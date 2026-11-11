@@ -195,10 +195,18 @@ export function EndingScreen(p: { model: EndingModel; onAgain(): void; onPractic
   const { reveal } = model
   const text = shareText(model, lang, t)
   const url = pageUrl()
+  // Presses while a share is open are ignored: a second share would be refused and fall back to the clipboard.
+  const sharing = useRef(false)
   const share = async (): Promise<void> => {
-    const outcome = await shareResult(text, url)
-    setShareOutcome(outcome)
-    if (outcome === 'manual') selectField() // the field is already there when Share is pressed again
+    if (sharing.current) return
+    sharing.current = true
+    try {
+      const outcome = await shareResult(text, url)
+      setShareOutcome(outcome)
+      if (outcome === 'manual') selectField() // the field is already there when Share is pressed again
+    } finally {
+      sharing.current = false
+    }
   }
 
   return (

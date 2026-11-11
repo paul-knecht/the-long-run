@@ -1201,6 +1201,14 @@ fieldset.broker-field {
   color: #fff;
 }
 
+/* Why "Start savings plan" is still disabled, right under it. */
+.broker-blocked {
+  margin: -4px 16px 0;
+  color: var(--broker-dim);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
 .broker-plan {
   margin-top: 12px;
   padding: 12px;

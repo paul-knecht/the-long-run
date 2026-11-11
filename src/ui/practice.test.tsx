@@ -101,6 +101,42 @@ test('an empty, zero or negative amount blocks the plan', async () => {
   expect(start()).toBeEnabled()
 })
 
+test('a disabled "Start savings plan" says why under it, and the reason goes once it is enabled', async () => {
+  renderPractice()
+  const hint = () => document.getElementById(start().getAttribute('aria-describedby')!)
+  expect(start()).toBeDisabled()
+  expect(start()).toHaveAccessibleDescription(en['practice.start.needProduct'])
+  expect(hint()).toBeVisible()
+  // The hint sits right after the button.
+  expect(start().compareDocumentPosition(hint()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+  await userEvent.click(screen.getByRole('radio', { name: /theme/i }))
+  expect(start()).toHaveAccessibleDescription(en['practice.start.needOther'])
+
+  await pickWorld()
+  expect(start()).toBeEnabled()
+  expect(start()).not.toHaveAttribute('aria-describedby')
+  expect(screen.queryByText(en['practice.start.needProduct'])).toBeNull()
+  expect(screen.queryByText(en['practice.start.needOther'])).toBeNull()
+
+  for (const bad of ['', '0', '-5']) {
+    await setAmount(bad)
+    expect(start()).toHaveAccessibleDescription(en['practice.start.needAmount'])
+  }
+
+  // With neither a product nor an amount, the product comes first, as on the form.
+  await userEvent.click(screen.getByRole('radio', { name: /managed fund/i }))
+  expect(start()).toHaveAccessibleDescription(en['practice.start.needOther'])
+})
+
+test('the reason under a disabled "Sparplan starten", in German', async () => {
+  renderPractice({ lang: 'de' })
+  expect(screen.getByText('Wähle zuerst aus, was du kaufen willst.')).toBeVisible()
+  await userEvent.click(screen.getByRole('radio', { name: /Weltweiter/ }))
+  await userEvent.clear(screen.getByLabelText(/wie viel/i))
+  expect(screen.getByText('Gib einen Betrag über null ein.')).toBeVisible()
+})
+
 test('a run that saved nothing starts at zero and can be edited', async () => {
   const { container } = renderPractice({ saveRate: 0 })
   expect(amount()).toHaveValue(0)

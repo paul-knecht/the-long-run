@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { market } from '../data'
 import { type Key, type Lang, money, percent, t } from '../i18n'
@@ -284,6 +284,32 @@ test('the manual field holds the line and the link, read-only, and is ready to c
   fireEvent.click(screen.getByRole('button', { name: /share/i }))
   await waitFor(() => expect(field).toHaveFocus())
   expect([field.selectionStart, field.selectionEnd]).toEqual([0, text.length])
+})
+
+test('presses while a share is still open are ignored, so a second press never ends in "Copied"', async () => {
+  let closeSheet!: () => void
+  const share = vi.fn<(data: ShareData) => Promise<void>>()
+  share.mockImplementationOnce(() => new Promise<void>((resolve) => (closeSheet = resolve)))
+  // While the sheet is open a browser refuses a second share; that used to fall back to the clipboard.
+  share.mockRejectedValue(new DOMException('a share is already open', 'InvalidStateError'))
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  vi.stubGlobal('navigator', { language: 'en', share, clipboard: { writeText } })
+  renderEnding(model)
+  const button = screen.getByRole('button', { name: /share/i })
+  await act(async () => {
+    fireEvent.click(button)
+    fireEvent.click(button)
+    fireEvent.click(button)
+  })
+  await act(async () => closeSheet())
+  expect(share).toHaveBeenCalledTimes(1)
+  expect(writeText).not.toHaveBeenCalled()
+  expect(screen.getByRole('status')).toBeEmptyDOMElement()
+
+  // Once that share is over, Share works again.
+  share.mockResolvedValue(undefined)
+  fireEvent.click(button)
+  await waitFor(() => expect(share).toHaveBeenCalledTimes(2))
 })
 
 test('the share line says how far you beat a savings account alone, and never "0% more"', async () => {

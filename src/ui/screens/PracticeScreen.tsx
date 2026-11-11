@@ -103,7 +103,10 @@ export function PracticeScreen(p: { saveRate: number; salary: number; onDone(): 
   const amount = Number(amountText)
   const amountOk = amountText.trim() !== '' && Number.isFinite(amount) && amount > 0
   const wrong = product !== null && product !== 'world' ? product : null
-  const ready = product === 'world' && amountOk
+  // What still stands in the way of "Start savings plan", in the order of the form.
+  const blocked: Key | null =
+    product === null ? 'practice.start.needProduct' : wrong ? 'practice.start.needOther' : !amountOk ? 'practice.start.needAmount' : null
+  const ready = blocked === null
 
   return (
     <main className="screen practice" data-testid="practice">
@@ -193,9 +196,14 @@ export function PracticeScreen(p: { saveRate: number; salary: number; onDone(): 
               ))}
             </fieldset>
 
-            <button type="submit" className="btn btn-wide broker-btn" disabled={!ready}>
+            <button type="submit" className="btn btn-wide broker-btn" disabled={!ready} aria-describedby={blocked ? `${ids}-blocked` : undefined}>
               {t('practice.start')}
             </button>
+            {blocked && (
+              <p id={`${ids}-blocked`} className="broker-blocked">
+                {t(blocked)}
+              </p>
+            )}
           </form>
         )}
       </div>
