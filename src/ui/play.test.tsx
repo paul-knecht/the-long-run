@@ -2,10 +2,11 @@ import { act, fireEvent, render, renderHook, screen, within } from '@testing-lib
 import userEvent from '@testing-library/user-event'
 import { market } from '../data'
 import { money, percent } from '../i18n'
-import { START_DIALS } from '../sim/constants'
+import { ETF_COST, MONTHS, START_DIALS } from '../sim/constants'
+import { marketLoss } from '../sim/portfolio'
 import { createSetup } from '../sim/setup'
 import { simulate } from '../sim/simulate'
-import type { Decision, Holdings, Pending, Snapshot, Timeline } from '../sim/types'
+import type { Decision, Holdings, Pending, RunSetup, Snapshot, Timeline } from '../sim/types'
 import { App, useLang as useLangFromApp } from './App'
 import { Dial } from './components/Dial'
 import { useLang } from './lang'
@@ -87,6 +88,18 @@ function timelineAt(at: number, holdings: Partial<Holdings>, pending: Pending, p
     riskyTarget: 'etf',
     parked: null,
     bill: null,
+  }
+}
+
+/** A run whose ETF returns are exactly the steps of this timeline's index; no interest, no stock of its own. */
+function setupFor(timeline: Timeline): RunSetup {
+  const { snapshots } = timeline
+  const net = (m: number): number => (m < snapshots.length ? snapshots[m].index / snapshots[m - 1].index : 1)
+  return {
+    ...createSetup(market, 3),
+    returns: Array.from({ length: MONTHS }, (_, i) => ({ stock: net(i + 1) / (1 - ETF_COST / 12) - 1, cash: 0 })),
+    stockAlpha: 0,
+    stockNoise: Array.from({ length: MONTHS }, () => 0),
   }
 }
 
@@ -367,11 +380,15 @@ describe('the crash', () => {
     const invested = etf + fund + stock
     const pct = timeline.pending?.kind === 'crash' ? timeline.pending.drawdown : NaN
 
+    // What the market did, month by month since the high, to the money invested at the time.
+    const loss = marketLoss(crashSetup, timeline.snapshots, takeover.peakMonth, at)
+    expect(money(loss, 'en')).not.toBe(money((invested * pct) / (1 - pct), 'en'))
+
     const header = document.querySelector('header')!
     expect(within(header).getByText('Your investments')).toBeInTheDocument()
     expect(within(header).queryByText('Your money')).toBeNull()
     expect(within(header).getByText(money(invested, 'en'))).toBeInTheDocument()
-    const line = `▼ ${percent(pct, 'en')} from the high. That's ${money((invested * pct) / (1 - pct), 'en')} of your investments, and falling.`
+    const line = `▼ ${percent(pct, 'en')} from the high. That's ${money(loss, 'en')} of your investments, and falling.`
     expect(within(header).getByText(line)).toBeInTheDocument()
     expect(line.match(/%/g)).toHaveLength(1)
     expect(header.textContent).not.toMatch(/\b(18|19|20)\d\d\b/)
@@ -405,19 +422,24 @@ describe('the crash', () => {
   test('buy more can be chosen when there is cash above the emergency fund', async () => {
     const decide = vi.fn()
     const pending = { kind: 'crash', at: 50, drawdown: 0.2 } as const
-    // The index peaks at month 30 and is 20% down at month 50.
-    render(<CrashScreen timeline={timelineAt(50, { cash: 20000, etf: 10000 }, pending, 30)} pending={pending} shown={50} decide={decide} />)
+    // The index peaks at month 30 and is 20% down at month 50; €10,000 stays invested all along.
+    const timeline = timelineAt(50, { cash: 20000, etf: 10000 }, pending, 30)
+    render(<CrashScreen setup={setupFor(timeline)} timeline={timeline} pending={pending} shown={50} decide={decide} />)
     expect(screen.getByRole('button', { name: 'Buy more' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Buy more' })).toHaveAccessibleDescription('Invest your savings above the emergency fund')
     expect(screen.getByText('€10,000')).toBeInTheDocument()
-    expect(screen.getByText("▼ 20% from the high. That's €2,500 of your investments, and falling.")).toBeInTheDocument()
+    // Each month of the fall took its step off the €10,000: about €2,219, not the €2,500 of a fall from €12,500.
+    const loss = timeline.snapshots.slice(31).reduce((sum, s) => sum + 10000 * (1 - s.index / timeline.snapshots[s.month - 1].index), 0)
+    expect(money(loss, 'en')).toBe('€2,219')
+    expect(screen.getByText("▼ 20% from the high. That's €2,219 of your investments, and falling.")).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Buy more' }))
     expect(decide).toHaveBeenCalledWith({ kind: 'crash', at: 50, choice: 'buyMore' })
   })
 
   test('the voices and the choices wait until the fall has been drawn', () => {
     const pending = { kind: 'crash', at: 50, drawdown: 0.3 } as const
-    render(<CrashScreen timeline={timelineAt(50, { cash: 20000, etf: 10000 }, pending, 30)} pending={pending} shown={45} decide={() => {}} />)
+    const timeline = timelineAt(50, { cash: 20000, etf: 10000 }, pending, 30)
+    render(<CrashScreen setup={setupFor(timeline)} timeline={timeline} pending={pending} shown={45} decide={() => {}} />)
     expect(screen.queryByRole('button', { name: 'Hold' })).toBeNull()
     expect(screen.queryByText('Lena')).toBeNull()
     expect(screen.getByText(/and falling/)).toBeInTheDocument()

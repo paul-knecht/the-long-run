@@ -1,6 +1,6 @@
 import { FUND_COST, FUND_ENTRY_FEE } from './constants'
 import { etfReturn } from './market'
-import type { Bucket, Holdings } from './types'
+import type { Bucket, Holdings, RunSetup, Snapshot } from './types'
 
 /** Order in which a bill is paid: cash first, then the rest from safest to riskiest. */
 const SELL_ORDER: Bucket[] = ['etf', 'fund', 'stock']
@@ -32,6 +32,23 @@ export function move(h: Holdings, from: Bucket, to: Bucket, amount: number): Hol
   const moved = Math.min(amount, h[from])
   if (!(moved > 0) || from === to) return { ...h }
   return { ...h, [from]: h[from] - moved, [to]: h[to] + arriving(to, moved) }
+}
+
+/**
+ * What the market took from the money invested (ETF, fund and stock) over months from + 1 to `to`:
+ * each month, the previous month's invested holdings times that month's return for each bucket.
+ * Money paid in, taken out or moved in between is neither a gain nor a loss; the savings account is
+ * left out. Negative when the investments gained.
+ */
+export function marketLoss(setup: RunSetup, snapshots: Snapshot[], from: number, to: number): number {
+  let loss = 0
+  for (let m = from + 1; m <= to; m++) {
+    const { etf, fund, stock } = snapshots[m - 1].holdings
+    const invested: Holdings = { cash: 0, etf, fund, stock }
+    const r = setup.returns[m - 1]
+    loss += total(invested) - total(grow(invested, { stock: r.stock, cash: r.cash, stockExtra: setup.stockAlpha / 12 + setup.stockNoise[m - 1] }))
+  }
+  return loss
 }
 
 /** Pays a bill from cash, then ETF, fund and stock. No bucket goes below zero; what cannot be covered is `unpaid`. */

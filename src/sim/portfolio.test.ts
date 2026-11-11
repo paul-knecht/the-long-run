@@ -1,4 +1,9 @@
-import { deposit, empty, grow, move, payBill, total } from './portfolio'
+import { market } from '../data'
+import { ETF_COST, FUND_COST, MONTHS } from './constants'
+import { deposit, empty, grow, marketLoss, move, payBill, total } from './portfolio'
+import { createSetup } from './setup'
+import { simulate } from './simulate'
+import type { Decision, Holdings, RunSetup, Snapshot } from './types'
 
 const flat = { stock: 0, cash: 0, stockExtra: 0 }
 
@@ -78,4 +83,54 @@ test('bill larger than everything leaves zero, not negative', () => {
   expect(total(r.holdings)).toBe(0)
   expect(r.unpaid).toBe(2700)
   expect(Object.values(r.holdings).every((v) => v >= 0)).toBe(true)
+})
+
+describe('marketLoss', () => {
+  const base = createSetup(market, 3)
+  /** A run whose months return `stock` (and `extra` on top for the single stock), cash nothing. */
+  const withReturns = (stock: number[], extra: number[] = []): RunSetup => ({
+    ...base,
+    returns: Array.from({ length: MONTHS }, (_, i) => ({ stock: stock[i] ?? 0, cash: 0.01 })),
+    stockAlpha: 0,
+    stockNoise: Array.from({ length: MONTHS }, (_, i) => extra[i] ?? 0),
+  })
+  const at = (month: number, holdings: Holdings): Snapshot => ({ month, holdings, total: total(holdings), index: 1, salary: 0, emergencyTarget: 0 })
+  const etfKeeps = 1 - ETF_COST / 12
+
+  test('counts only what the market did to money already invested, not money paid in after the high', () => {
+    // €1,000 in the ETF at the high; the market falls 10%, €400 goes in, then it falls 20%.
+    const setup = withReturns([-0.1, -0.2])
+    const afterOne = 1000 * 0.9 * etfKeeps
+    const snapshots = [at(0, { ...empty(), etf: 1000 }), at(1, { ...empty(), etf: afterOne + 400 }), at(2, { ...empty(), etf: (afterOne + 400) * 0.8 * etfKeeps })]
+    const exact = 1000 * (1 - 0.9 * etfKeeps) + (afterOne + 400) * (1 - 0.8 * etfKeeps)
+    expect(marketLoss(setup, snapshots, 0, 2)).toBeCloseTo(exact, 9)
+    expect(marketLoss(setup, snapshots, 0, 1)).toBeCloseTo(1000 * (1 - 0.9 * etfKeeps), 9)
+    expect(marketLoss(setup, snapshots, 2, 2)).toBe(0)
+    // Treating everything held now as if it had been in at the high says over 10% more.
+    const invested = snapshots[2].holdings.etf
+    const fall = 1 - 0.72 * etfKeeps ** 2
+    expect((invested * fall) / (1 - fall)).toBeGreaterThan(exact * 1.1)
+  })
+
+  test("takes each bucket's own return and leaves the savings account out", () => {
+    const setup = withReturns([0, -0.2], [0, 0.05])
+    const held = { cash: 5000, etf: 1400, fund: 200, stock: 100 }
+    const snapshots = [at(0, held), at(1, held), at(2, held)]
+    const month2 = 1400 * (1 - 0.8 * etfKeeps) + 200 * (1 - 0.8 * (1 - FUND_COST / 12)) + 100 * 0.15
+    const month1 = 1400 * (1 - etfKeeps) + 200 * (1 - (1 - FUND_COST / 12))
+    expect(marketLoss(setup, snapshots, 0, 2)).toBeCloseTo(month1 + month2, 9)
+  })
+
+  test('with nothing paid in or moved, it is just the fall in value of the investments', () => {
+    // Seed 3, everything into the ETF for five years, then nothing more: until the car bill at month 96
+    // the ETF only grows or falls.
+    const log: Decision[] = Array.from({ length: 20 }, (_, i): Decision => ({ kind: 'year', at: 12 * i, saveRate: i < 5 ? 0.3 : 0, etfShare: 1 }))
+    log.push({ kind: 'event', at: base.schedule.windfall, event: 'windfall', choice: 'cash' })
+    const run = simulate(base, log, 'auto')
+    const from = 60
+    const to = 95
+    expect(run.snapshots.slice(from + 1, to + 1).every((s) => s.holdings.fund === 0 && s.holdings.stock === 0)).toBe(true)
+    expect(run.flows.slice(from + 1, to + 1).every((f) => f === 0)).toBe(true)
+    expect(marketLoss(base, run.snapshots, from, to)).toBeCloseTo(run.snapshots[from].holdings.etf - run.snapshots[to].holdings.etf, 6)
+  })
 })

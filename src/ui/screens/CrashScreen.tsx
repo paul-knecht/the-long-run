@@ -1,7 +1,8 @@
 import { type JSX, useEffect, useId, useRef } from 'react'
 import { type Key, money, percent } from '../../i18n'
 import { MONTHS, START_AGE } from '../../sim/constants'
-import type { CrashChoice, Decision, Pending, Timeline } from '../../sim/types'
+import { marketLoss } from '../../sim/portfolio'
+import type { CrashChoice, Decision, Pending, RunSetup, Timeline } from '../../sim/types'
 import { Chart } from '../components/Chart'
 import { Appear, ChatBubble, Headline } from '../components/ChatBubble'
 import { Header } from '../components/Header'
@@ -23,31 +24,34 @@ const CHOICES: readonly { choice: CrashChoice; label: Key; hint: Key }[] = [
 /**
  * The takeover. While the market falls into it, the chart shows the ETF's price (green up to the
  * high, red after it) and the header shows the money invested, with the fall from the high and what
- * it has cost that money; with nothing invested the header keeps the total and says so. Once `shown`
- * reaches the takeover month a doom headline and the cast pile in one after another, then Sell /
- * Hold / Buy more. "Buy more" is disabled, with the reason, when the savings account holds nothing
- * above the emergency fund.
+ * the market has taken since then from the money invested at the time (money paid in after the high
+ * counts only from when it went in); with nothing invested the header keeps the total and says so.
+ * Once `shown` reaches the takeover month a doom headline and the cast pile in one after another,
+ * then Sell / Hold / Buy more. "Buy more" is disabled, with the reason, when the savings account
+ * holds nothing above the emergency fund.
  */
 export function CrashScreen(p: {
+  setup: RunSetup
   timeline: Timeline
   pending: Extract<Pending, { kind: 'crash' }>
   shown: number
   decide(d: Decision): void
 }): JSX.Element {
-  const { timeline, pending, shown, decide } = p
+  const { setup, timeline, pending, shown, decide } = p
   const { lang, t } = useLang()
   const ids = useId()
   const { snapshots } = timeline
 
   const now = Math.min(shown, pending.at)
   const high = fallStart(snapshots, pending.at)
-  // The ETF's fall from its running high at the month on screen (pending.drawdown at the takeover).
-  const fall = Math.max(0, 1 - snapshots[now].index / snapshots[fallStart(snapshots, now)].index)
+  // The ETF's fall from its running high at the month on screen (pending.drawdown at the takeover),
+  // and what the market has taken from the investments since that high.
+  const highNow = fallStart(snapshots, now)
+  const fall = Math.max(0, 1 - snapshots[now].index / snapshots[highNow].index)
   const { holdings } = snapshots[now]
   const invested = holdings.etf + holdings.fund + holdings.stock
   const anyInvested = Math.round(invested) > 0
-  // What the fall has cost the money invested: it stood at invested / (1 - fall) at the high.
-  const loss = (invested * fall) / (1 - fall)
+  const loss = marketLoss(setup, snapshots, highNow, now)
   const pct = percent(fall, lang)
 
   const arrived = shown >= pending.at

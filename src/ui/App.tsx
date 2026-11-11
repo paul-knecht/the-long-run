@@ -5,7 +5,7 @@ import { MONTHS, START_AGE } from '../sim/constants'
 import { buildEnding } from '../sim/ending'
 import { createSetup } from '../sim/setup'
 import { decisionKey, simulate } from '../sim/simulate'
-import type { Decision, Timeline } from '../sim/types'
+import type { Decision, RunSetup, Timeline } from '../sim/types'
 import { Chart } from './components/Chart'
 import { Header } from './components/Header'
 import { LangContext, type LangContextValue } from './lang'
@@ -102,7 +102,7 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
       <div className="app" data-mood={mood} data-instant={instant || undefined}>
         {view === 'start' && <StartScreen onStart={startRun} />}
         {view === 'play' && (
-          <PlayScreen timeline={timeline} shown={shown} busy={busy} mood={mood} salary={salary} reaction={reaction} decide={decide} />
+          <PlayScreen setup={setup} timeline={timeline} shown={shown} busy={busy} mood={mood} salary={salary} reaction={reaction} decide={decide} />
         )}
         {view === 'ending' && ending && <EndingScreen model={ending} onAgain={startRun} onPractice={() => setPhase('practice')} />}
         {/* The pretend broker: the average rate of the run, the pay of its last month; "back" leads to the start screen, where a new run begins. */}
@@ -115,6 +115,7 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
 }
 
 interface PlayScreenProps {
+  setup: RunSetup
   timeline: Timeline
   /** Completed months drawn so far. */
   shown: number
@@ -131,9 +132,9 @@ interface PlayScreenProps {
  * crash screen has the whole screen. Otherwise the header and the chart sit on top; below them the
  * year's choices (disabled while the year is drawn), or a message once the year is drawn.
  */
-function PlayScreen({ timeline, shown, busy, mood, salary, reaction, decide }: PlayScreenProps): JSX.Element {
+function PlayScreen({ setup, timeline, shown, busy, mood, salary, reaction, decide }: PlayScreenProps): JSX.Element {
   const { pending } = timeline
-  if (mood === 'crash' && pending?.kind === 'crash') return <CrashScreen timeline={timeline} pending={pending} shown={shown} decide={decide} />
+  if (mood === 'crash' && pending?.kind === 'crash') return <CrashScreen setup={setup} timeline={timeline} pending={pending} shown={shown} decide={decide} />
 
   const year = yearOnScreen(shown, pending)
   // "This year" is the year being drawn, or the one just finished at a year boundary.
