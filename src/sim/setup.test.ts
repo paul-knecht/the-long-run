@@ -5,6 +5,17 @@ test('deterministic', () => {
   expect(createSetup(market, 42)).toEqual(createSetup(market, 42))
 })
 
+test('the draws for a seed stay as they were', () => {
+  // Pinned from the code before drawStock was split out; any change to the order or number of draws moves these.
+  const s = createSetup(market, 3)
+  expect(s.startYear).toBe(1973)
+  expect(s.schedule).toEqual({ werner: 12, keller: 36, bill: 96, jonas: 72, raise: 84, windfall: 120 })
+  expect(s.stockAlpha).toBe(-0.08)
+  expect(s.stockNoise[0]).toBe(-0.006597700193433542)
+  expect(s.stockNoise[239]).toBe(-0.12444263444078016)
+  expect(createSetup(market, 42).stockNoise[239]).toBe(0.07477863674146676)
+})
+
 test('different seeds reach different histories', () => {
   const years = new Set(Array.from({ length: 60 }, (_, i) => createSetup(market, i).startYear))
   expect(years.size).toBeGreaterThanOrEqual(15)

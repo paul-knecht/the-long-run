@@ -37,6 +37,12 @@ export function decisionKey(d: Decision): string {
 /** Clamps to [lo, hi]; anything that is not above `lo` (NaN included) becomes `lo`. */
 const clamp = (v: number, lo: number, hi: number): number => (v > lo ? Math.min(v, hi) : lo)
 
+/** The dials a `year` decision sets: the save rate within [0, MAX_SAVE_RATE], the ETF share within [0, 1]. */
+export const dialsOf = (y: { saveRate: number; etfShare: number }): Timeline['dials'] => ({
+  saveRate: clamp(y.saveRate, 0, MAX_SAVE_RATE),
+  etfShare: clamp(y.etfShare, 0, 1),
+})
+
 /**
  * Replays the decision log month by month from the empty start and stops at the first point
  * that needs a decision the log does not hold. In 'auto' mode such a decision is filled in with
@@ -204,7 +210,7 @@ export function simulate(
 
     const y = byKey.get(keyOf('year', at))
     if (y?.kind === 'year') {
-      dials = { saveRate: clamp(y.saveRate, 0, MAX_SAVE_RATE), etfShare: clamp(y.etfShare, 0, 1) }
+      dials = dialsOf(y)
     } else if (mode === 'interactive') {
       return finish({ kind: 'year', at, actions: availableActions() })
     }

@@ -36,6 +36,13 @@ function drawStockAlpha(rng: Rng): number {
   return STOCK_FATES[STOCK_FATES.length - 1].alpha
 }
 
+/** The single stock's own path: its fate (yearly drift against the market), then one noise draw per month. */
+export function drawStock(rng: Rng): { alpha: number; noise: number[] } {
+  const alpha = drawStockAlpha(rng)
+  const noise = Array.from({ length: MONTHS }, () => rng.normal() * STOCK_NOISE_SD)
+  return { alpha, noise }
+}
+
 /**
  * Everything about one run that is fixed before the player chooses. Draws happen in a
  * fixed order (start year, schedule, stock fate, noise) so a later draw never shifts an earlier one.
@@ -44,8 +51,7 @@ export function createSetup(series: MarketSeries, seed: number): RunSetup {
   const rng = createRng(seed)
   const startYear = rng.pick(eligibleStartYears(series))
   const schedule = drawSchedule(rng)
-  const stockAlpha = drawStockAlpha(rng)
-  const stockNoise = Array.from({ length: MONTHS }, () => rng.normal() * STOCK_NOISE_SD)
+  const { alpha: stockAlpha, noise: stockNoise } = drawStock(rng)
 
   const window = windowReturns(series, startYear)
   if (!window) throw new Error(`No ${MONTHS}-month window from ${startYear}`)
