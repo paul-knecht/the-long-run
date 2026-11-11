@@ -1,7 +1,7 @@
 import { CRASH_MIN_DEPTH, MONTHS, START_DIALS, YEARS } from './constants'
 import { etfReturn } from './market'
 import { grow, total } from './portfolio'
-import { alternatives, flip, type Alternative, type FlipTarget } from './replay'
+import { alternatives, flip, type Alternative } from './replay'
 import { createRng } from './rng'
 import { drawStock } from './setup'
 import { dialsOf, simulate } from './simulate'
@@ -141,7 +141,7 @@ export function buildEnding(series: MarketSeries, setup: RunSetup, decisions: De
 
   const fall = worstFall(performanceIndex(setup, run.snapshots))
 
-  const windfallAt: FlipTarget = { kind: 'event', at: setup.schedule.windfall, event: 'windfall' }
+  const windfallAt = { kind: 'event', at: setup.schedule.windfall, event: 'windfall' } as const
   const windfall = loggedChoice(setup, decisions, 'windfall')
   const lumpChoice = windfall === 'spread' || windfall === 'cash' ? windfall : 'lump'
 

@@ -127,15 +127,60 @@ test('the lump-sum card compares the windfall at once with spreading it', () => 
   const stats = historyStats(market)
   const auto = buildEnding(market, setup, yearly(20, 0.15, 0.7))
   expect(auto.cards.lumpSum.choice).toBe('lump')
-  expect(auto.cards.lumpSum.lumpFinal).toBeCloseTo(auto.final, 6) // same dials before and after, so the flip changes nothing
+  expect(auto.cards.lumpSum.lumpFinal).toBe(auto.final) // the player's own choice replays their own run
   expect(auto.cards.lumpSum.spreadFinal).not.toBeCloseTo(auto.final, 0)
   expect(auto.cards.lumpSum.winRate).toBe(stats.lump.wins / stats.lump.total)
 
   const spread = buildEnding(market, setup, [...yearly(20, 0.15, 0.7), windfall('spread')])
   expect(spread.cards.lumpSum.choice).toBe('spread')
-  expect(spread.cards.lumpSum.spreadFinal).toBeCloseTo(spread.final, 6)
-  expect(spread.cards.lumpSum.lumpFinal).toBeCloseTo(auto.final, 6)
+  expect(spread.cards.lumpSum.spreadFinal).toBe(spread.final)
+  expect(spread.cards.lumpSum.lumpFinal).toBe(auto.final)
   expect(buildEnding(market, setup, [...yearly(20, 0.15, 0.7), windfall('cash')]).cards.lumpSum.choice).toBe('cash')
+})
+
+/** Seed 1 takes over at month 101; seed 2 sends Grandma's money at month 108. */
+const one = createSetup(market, 1)
+const two = createSetup(market, 2)
+
+test("the paths not taken keep the player's later savings: the seed-1 example", () => {
+  // Saves 10% with 70% to the ETF, sells at month 101, gets back in at the next year and saves 25% from then on.
+  expect(one.takeovers[0]).toBe(101)
+  const log: Decision[] = [
+    ...Array.from({ length: 20 }, (_, i): Decision => ({ kind: 'year', at: 12 * i, saveRate: 12 * i < 101 ? 0.1 : 0.25, etfShare: 0.7 })),
+    { kind: 'crash', at: 101, choice: 'sell' },
+    { kind: 'action', at: 108, action: 'getBackIn' },
+  ]
+  const e = buildEnding(market, one, log)
+  const held = e.lines.find((l) => l.id === 'held')!
+  expect(Math.round(e.final)).toBe(277502)
+  // Holding with the same savings ends above what the player got; the old replay froze the 10% and showed €164,535.
+  expect(Math.round(held.final)).toBe(284491)
+  expect(held.final).toBeGreaterThan(e.final)
+})
+
+test("the lump-sum card's figure for the player's own choice is their final amount, whatever they did afterwards", () => {
+  // 10% with 70% to the ETF; from month 168 on, 25%.
+  const dials = (rate: number, share: number): Decision[] =>
+    Array.from({ length: 20 }, (_, i): Decision => ({ kind: 'year', at: 12 * i, saveRate: 12 * i < 168 ? 0.1 : rate, etfShare: 12 * i < 168 ? 0.7 : share }))
+  const at = two.schedule.windfall
+  expect(at).toBe(108)
+  const lump = buildEnding(market, two, [...dials(0.25, 0.7), { kind: 'event', at, event: 'windfall', choice: 'lump' }])
+  expect(Math.round(lump.final)).toBe(386816)
+  // The old replay froze the 10% and showed €325,542 for investing at once.
+  expect(lump.cards.lumpSum.lumpFinal).toBe(lump.final)
+
+  const later: Decision[] = [
+    ...dials(0.3, 0.2),
+    { kind: 'event', at, event: 'windfall', choice: 'spread' },
+    { kind: 'action', at: 168, action: 'switchBackToEtf' },
+    { kind: 'event', at: two.schedule.keller, event: 'keller', choice: 'follow' },
+    ...two.takeovers.map((m): Decision => ({ kind: 'crash', at: m, choice: 'sell' })),
+    { kind: 'action', at: 180, action: 'getBackIn' },
+  ]
+  const spread = buildEnding(market, two, later)
+  expect(spread.cards.lumpSum.choice).toBe('spread')
+  expect(spread.cards.lumpSum.spreadFinal).toBe(spread.final)
+  expect(spread.cards.lumpSum.lumpFinal).not.toBe(spread.final)
 })
 
 test('the savings-rate card averages the dials in force at each year boundary', () => {
