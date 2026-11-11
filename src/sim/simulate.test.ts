@@ -5,7 +5,7 @@ import { total } from './portfolio'
 import { createSetup } from './setup'
 import { decisionKey, simulate } from './simulate'
 import { yearly } from './testHelpers'
-import type { ActionId, CrashChoice, Decision, EventChoice, EventId, RunSetup } from './types'
+import type { ActionId, CrashChoice, Decision, EventChoice, EventId, RunSetup, Timeline } from './types'
 
 const setup = createSetup(market, 3)
 
@@ -251,7 +251,7 @@ test('following Uncle Werner parks the money; getBackIn puts it back', () => {
   expect(stayed.parked).toEqual({ amount: etf, etfShare: 0.5 })
 })
 
-test('getBackIn moves no more than the cash there is', () => {
+test('getBackIn with no cash left moves nothing but still restores the split', () => {
   // Saving 50 a month: 300 parked at month 12; by month 48 cash is about 2400 and the bill takes all of it.
   const t = simulate(quiet(), [year(0, 0.05, 0.5), ev('werner', 'follow'), act(Q.bill, 'getBackIn')], 'auto')
   expect(t.bill).toMatchObject({ sold: 0, drawdownAtSale: 0 })
@@ -260,6 +260,38 @@ test('getBackIn moves no more than the cash there is', () => {
   expect(t.snapshots[Q.bill].total).toBe(0)
   expect(t.parked).toBeNull()
   expect(t.dials.etfShare).toBe(0.5)
+})
+
+test('getBackIn moves only the cash there is when it is less than the parked amount', () => {
+  // About 1200 parked at month 12; saving 30 a month into cash, about 480 is left after the bill at month 48.
+  const log = [year(0, 0.2, 0.5), ev('werner', 'follow'), year(12, 0.03, 0)]
+  const before = simulate(quiet(), log, 'auto')
+  const { cash } = before.snapshots[Q.bill].holdings
+  const amount = before.parked!.amount
+  expect(cash).toBeGreaterThan(0)
+  expect(cash).toBeLessThan(amount)
+
+  const back = simulate(quiet(), [...log, act(Q.bill, 'getBackIn')], 'auto')
+  expect(back.snapshots[Q.bill].holdings).toMatchObject({ etf: cash, cash: 0 })
+  expect(back.parked).toBeNull()
+  expect(back.dials.etfShare).toBe(0.5)
+})
+
+test('two actions at one boundary run in the order they were taken', () => {
+  // At month 24 the money is parked and new money goes to the fund.
+  const s = quiet()
+  const log = [year(0, 0.2, 0.5), ev('werner', 'follow'), year(12, 0.2, 0.3), ev('keller', 'follow')]
+  const parked = simulate(s, log).parked!.amount
+  const inFirst = simulate(s, [...log, act(24, 'getBackIn'), act(24, 'switchBackToEtf')])
+  const switchFirst = simulate(s, [...log, act(24, 'switchBackToEtf'), act(24, 'getBackIn')])
+  for (const t of [inFirst, switchFirst]) {
+    expect(t.pending).toEqual({ kind: 'year', at: 24, actions: [] })
+    expect(t.snapshots[24].holdings.fund).toBe(0)
+    expect(t.riskyTarget).toBe('etf')
+  }
+  // Getting back in first passes the parked money through the fund and its entry fee.
+  const etf = (t: Timeline) => t.snapshots[24].holdings.etf
+  expect(etf(switchFirst) - etf(inFirst)).toBeCloseTo(parked * FUND_ENTRY_FEE)
 })
 
 test('selling in a crash while parked adds to the parked amount and keeps the split to return to', () => {
@@ -393,6 +425,17 @@ test('the bill is paid from cash first and sells shares only for what cash canno
   expect(sold.flows[Q.bill]).toBeCloseTo(100 - 3000)
 })
 
+test('an event choice with no listed effect counts as decided and does nothing', () => {
+  const log = [...yearly(4, 0.1, 0), ev('werner', 'decline'), ev('keller', 'decline'), ev('jonas', 'decline')]
+  const waiting = simulate(quiet(), log)
+  expect(waiting.pending).toMatchObject({ kind: 'event', event: 'bill' })
+  const declined = simulate(quiet(), [...log, ev('bill', 'decline')])
+  expect(declined.pending).toEqual({ kind: 'year', at: Q.bill, actions: [] })
+  expect(declined.bill).toBeNull()
+  expect(declined.flows).toEqual(waiting.flows)
+  expect(declined.snapshots).toEqual(waiting.snapshots)
+})
+
 test('buying more in a crash moves the cash above the emergency fund', () => {
   const s = quiet({ takeovers: [30] })
   const more = simulate(s, [...yearly(20, 0.2, 0), crash(30, 'buyMore')], 'auto')
@@ -400,6 +443,39 @@ test('buying more in a crash moves the cash above the emergency fund', () => {
   expect(more.snapshots[30].holdings).toMatchObject({ cash: 3000, etf: 6000 - 3000 })
   const little = simulate(s, [...yearly(20, 0.05, 0), crash(30, 'buyMore')], 'auto')
   expect(little.snapshots[30].holdings).toMatchObject({ cash: 1500, etf: 0 })
+})
+
+test('buying more ends a running windfall spread, so the emergency fund stays put', () => {
+  const buy = Q.windfall + 3
+  const log = [...yearly(20, 0, 0), ev('windfall', 'spread'), crash(buy, 'buyMore')]
+  const t = simulate(quiet({ takeovers: [buy] }), log, 'auto')
+  expect(t.snapshots[buy].holdings.cash).toBeCloseTo(t.snapshots[buy].emergencyTarget)
+  for (let m = buy + 1; m <= Q.windfall + 12; m++) {
+    expect(t.snapshots[m].holdings.cash).toBe(t.snapshots[buy].holdings.cash)
+  }
+})
+
+test('buying more while parked counts as getting back in', () => {
+  const s = quiet({ takeovers: [30] })
+  const log = [
+    year(0, 0.2, 0.5),
+    ev('werner', 'follow'),
+    year(12, 0.2, 0),
+    ev('keller', 'decline'),
+    year(24, 0.2, 0),
+  ]
+  const before = simulate(s, log)
+  expect(before.pending).toMatchObject({ kind: 'crash', at: 30 })
+  expect(before.parked).toMatchObject({ etfShare: 0.5 })
+  const { cash } = before.snapshots[30].holdings
+
+  const t = simulate(s, [...log, crash(30, 'buyMore'), ev('jonas', 'decline')])
+  expect(t.pending).toEqual({ kind: 'year', at: 36, actions: [] })
+  expect(t.parked).toBeNull()
+  expect(t.dials.etfShare).toBe(0.5)
+  // Only the cash above the emergency fund goes in, not the parked amount on top.
+  expect(t.snapshots[30].holdings.cash).toBeCloseTo(3000)
+  expect(t.snapshots[30].holdings.etf).toBeCloseTo(cash - 3000)
 })
 
 test('simulate leaves its inputs untouched', () => {

@@ -25,18 +25,13 @@ const AUTO_EVENT_CHOICE: Record<EventId, EventChoice> = {
 }
 const AUTO_CRASH_CHOICE: CrashChoice = 'hold'
 
+/** The one place a key is spelled: kind, month and, for events and actions, which one. */
+const keyOf = (kind: Decision['kind'], at: number, which?: EventId | ActionId): string =>
+  which ? `${kind}:${at}:${which}` : `${kind}:${at}`
+
 /** Two decisions with the same key are the same choice; the first one in the log counts. */
 export function decisionKey(d: Decision): string {
-  switch (d.kind) {
-    case 'year':
-      return `year:${d.at}`
-    case 'event':
-      return `event:${d.at}:${d.event}`
-    case 'crash':
-      return `crash:${d.at}`
-    case 'action':
-      return `action:${d.at}:${d.action}`
-  }
+  return keyOf(d.kind, d.at, d.kind === 'event' ? d.event : d.kind === 'action' ? d.action : undefined)
 }
 
 /** Clamps to [lo, hi]; anything that is not above `lo` (NaN included) becomes `lo`. */
@@ -140,6 +135,13 @@ export function simulate(
   const applyCrash = (choice: CrashChoice, at: number): void => {
     if (choice === 'sell') park()
     if (choice === 'buyMore') {
+      // Buying more while parked counts as getting back in; only the cash above the emergency fund goes in.
+      if (parked) {
+        dials = { ...dials, etfShare: parked.etfShare }
+        parked = null
+      }
+      // That cash is invested now, so a windfall still being spread stops drawing on the emergency fund.
+      spreadLeft = 0
       const aboveEmergencyFund = holdings.cash - snapshots[at].emergencyTarget
       holdings = move(holdings, 'cash', riskyTarget, aboveEmergencyFund)
     }
@@ -189,7 +191,7 @@ export function simulate(
   for (let at = 0; at < MONTHS; at += 12) {
     const event = eventAt.get(at)
     if (event) {
-      const d = byKey.get(`event:${at}:${event}`)
+      const d = byKey.get(keyOf('event', at, event))
       const choice = d?.kind === 'event' ? d.choice : mode === 'auto' ? AUTO_EVENT_CHOICE[event] : null
       if (!choice) {
         const billCovered = event === 'bill' ? { billCovered: holdings.cash >= BILL } : {}
@@ -200,7 +202,7 @@ export function simulate(
     for (const action of actionsAt.get(at) ?? []) applyAction(action)
     resnap(at)
 
-    const y = byKey.get(`year:${at}`)
+    const y = byKey.get(keyOf('year', at))
     if (y?.kind === 'year') {
       dials = { saveRate: clamp(y.saveRate, 0, MAX_SAVE_RATE), etfShare: clamp(y.etfShare, 0, 1) }
     } else if (mode === 'interactive') {
@@ -212,7 +214,7 @@ export function simulate(
       playMonth(m)
       // A takeover at a year's last month is decided here, before that month's event and year.
       if (m < MONTHS && takeovers.has(m)) {
-        const d = byKey.get(`crash:${m}`)
+        const d = byKey.get(keyOf('crash', m))
         const choice = d?.kind === 'crash' ? d.choice : mode === 'auto' ? AUTO_CRASH_CHOICE : null
         if (!choice) return finish({ kind: 'crash', at: m, drawdown: fallFromPeak() })
         applyCrash(choice, m)
