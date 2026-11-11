@@ -1,6 +1,6 @@
 import { deposit, empty, grow, total } from './portfolio'
 import { simulate } from './simulate'
-import type { Decision, Holdings, RunSetup } from './types'
+import type { CrashChoice, Decision, EventChoice, EventId, Holdings, RunSetup } from './types'
 
 export type AltId = 'held' | 'sold' | 'etfOnly' | 'fundOnly' | 'cashOnly'
 
@@ -12,35 +12,29 @@ export interface Alternative {
   emphasised: boolean
 }
 
+/** The choice to turn around: the crash at a month, or one named event at a year boundary. */
+export type FlipTarget = { kind: 'crash'; at: number } | { kind: 'event'; at: number; event: EventId }
+
 /**
- * The log with one crash or event choice changed. Whatever the player did after that point in
- * their dials and actions is dropped, so the replay (in 'auto' mode) carries the dials in force
- * at the target forward. A `year` decision taken at the target's own boundary stays.
- * An event is identified by its `at` alone: with no event logged there, nothing is added,
- * because the log cannot say which event the choice belongs to.
+ * The log with one crash or event choice changed: the logged decision for the target is
+ * replaced, or added when the log holds none (auto mode would have filled it in). Whatever
+ * the player did after that point in their dials and actions is dropped, so the replay
+ * (in 'auto' mode) carries the dials in force at the target forward. A `year` decision taken
+ * at the target's own boundary stays.
  */
-export function flip(
-  decisions: Decision[],
-  target: { kind: 'crash' | 'event'; at: number },
-  choice: string,
-): Decision[] {
-  const kept = decisions.filter(
-    (d) => !(d.kind === 'year' && d.at > target.at) && !(d.kind === 'action' && d.at >= target.at),
+export function flip(decisions: Decision[], target: FlipTarget, choice: string): Decision[] {
+  const isTarget = (d: Decision): boolean =>
+    d.kind === target.kind &&
+    d.at === target.at &&
+    (d.kind !== 'event' || target.kind !== 'event' || d.event === target.event)
+  const rest = decisions.filter(
+    (d) => !isTarget(d) && !(d.kind === 'year' && d.at > target.at) && !(d.kind === 'action' && d.at >= target.at),
   )
-  const old = kept.find((d) => d.kind === target.kind && d.at === target.at)
-  const rest = kept.filter((d) => d !== old && !(d.kind === target.kind && d.at === target.at))
-  if (target.kind === 'crash') {
-    return [
-      ...rest,
-      {
-        kind: 'crash',
-        at: target.at,
-        choice: choice as Extract<Decision, { kind: 'crash' }>['choice'],
-      },
-    ]
-  }
-  if (old?.kind !== 'event') return rest
-  return [...rest, { ...old, choice: choice as typeof old.choice }]
+  const flipped: Decision =
+    target.kind === 'crash'
+      ? { kind: 'crash', at: target.at, choice: choice as CrashChoice }
+      : { kind: 'event', at: target.at, event: target.event, choice: choice as EventChoice }
+  return [...rest, flipped]
 }
 
 /**

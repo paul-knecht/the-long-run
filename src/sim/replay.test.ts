@@ -35,7 +35,7 @@ test('flip adds a crash decision when none was logged, and replaces an event cho
   const added = flip(yearly(20, 0.1, 0.5), { kind: 'crash', at: 60 }, 'sell')
   expect(added.filter((d) => d.kind === 'crash')).toEqual([{ kind: 'crash', at: 60, choice: 'sell' }])
   const log: Decision[] = [...yearly(3, 0.1, 0.5), { kind: 'event', at: 12, event: 'werner', choice: 'follow' }]
-  const out = flip(log, { kind: 'event', at: 12 }, 'decline')
+  const out = flip(log, { kind: 'event', at: 12, event: 'werner' }, 'decline')
   expect(out.filter((d) => d.kind === 'event')).toEqual([{ kind: 'event', at: 12, event: 'werner', choice: 'decline' }])
 })
 
@@ -84,4 +84,18 @@ test('singleBucket: withdrawals never go below zero and the fund pays its entry 
 
 test('zero savings stays finite and non-negative', () => {
   expect(alternatives(setup, yearly(20, 0, 0.5)).every((a) => Number.isFinite(a.final) && a.final >= 0)).toBe(true)
+})
+
+test('flip adds a missing event decision, so lump and spread differ; a logged one is replaced, not duplicated', () => {
+  const at = setup.schedule.windfall
+  const log = yearly(20, 0.15, 0.7)
+  const target = { kind: 'event', at, event: 'windfall' } as const
+  const lump = flip(log, target, 'lump')
+  const spread = flip(log, target, 'spread')
+  expect(spread.filter((d) => d.kind === 'event')).toEqual([{ kind: 'event', at, event: 'windfall', choice: 'spread' }])
+  expect(simulate(setup, spread, 'auto').snapshots[240].total).not.toBe(
+    simulate(setup, lump, 'auto').snapshots[240].total,
+  )
+  const again = flip(lump, target, 'spread')
+  expect(again.filter((d) => d.kind === 'event')).toEqual([{ kind: 'event', at, event: 'windfall', choice: 'spread' }])
 })
