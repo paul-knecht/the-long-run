@@ -994,3 +994,230 @@ button {
     font-size: 2.75rem;
   }
 }
+
+/* The practice step: a light "broker app" card inside the dark page (game-flow.html, screen 5).
+   Its own colours, so it reads as a different app; the "Practice" badge is always in its top bar. */
+.practice-lang {
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.broker {
+  --broker-bg: #f5f6f8;
+  --broker-card: #ffffff;
+  --broker-line: #d5d8dd;
+  --broker-text: #15171a;
+  --broker-dim: #4b5563;
+  --broker-blue: #0b57d0;
+  --broker-alert: #b42318;
+  --broker-alert-bg: #fef3f2;
+
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--broker-bg);
+  color: var(--broker-text);
+  color-scheme: light;
+}
+
+.broker :focus-visible {
+  outline-color: var(--broker-blue);
+}
+
+.broker-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--broker-line);
+  background: var(--broker-card);
+}
+
+.broker-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.practice-badge {
+  flex: none;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.broker form,
+.broker > div {
+  display: grid;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.broker-intro,
+.broker-plan,
+.broker-checklist,
+.broker form > .broker-btn,
+.broker > div > .broker-btn,
+.broker-field {
+  margin: 0 16px;
+}
+
+.broker-intro {
+  margin-top: 12px;
+  color: var(--broker-dim);
+  font-size: 0.9375rem;
+}
+
+.broker-field {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--broker-line);
+  border-radius: 10px;
+  background: var(--broker-card);
+}
+
+.broker-field legend,
+.broker-label {
+  padding: 0 4px;
+  color: var(--broker-dim);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.broker-label {
+  display: block;
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+fieldset.broker-field {
+  display: grid;
+  gap: 8px;
+}
+
+.broker-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid var(--broker-line);
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.broker-choice[data-checked] {
+  border-color: var(--broker-blue);
+  box-shadow: inset 0 0 0 1px var(--broker-blue);
+  background: #eef3fc;
+}
+
+.broker-choice:has(:focus-visible) {
+  outline: 3px solid var(--broker-blue);
+  outline-offset: 2px;
+}
+
+/* The ring is drawn round the whole card; the radio itself needs none. */
+.broker-choice input:focus-visible {
+  outline: none;
+}
+
+.broker-choice input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  accent-color: var(--broker-blue);
+}
+
+.broker-choice-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.broker-choice-name {
+  font-weight: 600;
+}
+
+.broker-choice-note {
+  color: var(--broker-dim);
+  font-size: 0.8125rem;
+}
+
+/* A wrong pick: red, a cross and words, so colour is not the only signal. */
+.broker-reason {
+  padding: 10px 12px;
+  border: 1px solid var(--broker-alert);
+  border-left-width: 6px;
+  border-radius: 10px;
+  background: var(--broker-alert-bg);
+  color: var(--broker-alert);
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.broker-amount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.broker-input {
+  flex: 0 1 9em;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid var(--broker-dim);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--broker-text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.broker-every {
+  color: var(--broker-dim);
+  font-size: 0.9375rem;
+  font-weight: 400;
+}
+
+.broker-hint {
+  min-height: 1.45em;
+  margin-top: 6px;
+  color: var(--broker-dim);
+  font-size: 0.875rem;
+}
+
+.broker .broker-btn {
+  width: auto; /* a grid item with side margins: it fills the card between them */
+  background: var(--broker-blue);
+  color: #fff;
+}
+
+.broker-plan {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--broker-line);
+  border-radius: 10px;
+  background: var(--broker-card);
+  font-weight: 700;
+}
+
+.broker-checklist {
+  display: grid;
+  gap: 10px;
+  padding-left: 1.5em;
+}
+
+.practice-smallprint {
+  display: grid;
+  gap: 6px;
+  margin-top: 24px;
+}

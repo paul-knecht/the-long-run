@@ -12,6 +12,7 @@ import { LangContext, type LangContextValue } from './lang'
 import { CrashScreen } from './screens/CrashScreen'
 import { EndingScreen } from './screens/EndingScreen'
 import { MessageScreen, Reaction } from './screens/MessageScreen'
+import { PracticeScreen } from './screens/PracticeScreen'
 import { StartScreen } from './screens/StartScreen'
 import { YearScreen } from './screens/YearScreen'
 import { FALL_MS, MONTH_MS, fallStart, useReveal, yearOnScreen } from './useReveal'
@@ -104,8 +105,10 @@ export function App(props: { seed?: number; instant?: boolean; cooldownMs?: numb
           <PlayScreen timeline={timeline} shown={shown} busy={busy} mood={mood} salary={salary} reaction={reaction} decide={decide} />
         )}
         {view === 'ending' && ending && <EndingScreen model={ending} onAgain={startRun} onPractice={() => setPhase('practice')} />}
-        {/* The practice step (Task 13). */}
-        {view === 'practice' && <div data-testid="practice" />}
+        {/* The pretend broker: the average rate of the run, the pay of its last month; "back" leads to the start screen, where a new run begins. */}
+        {view === 'practice' && ending && (
+          <PracticeScreen saveRate={ending.cards.savingsRate.averageRate} salary={setup.salary[MONTHS - 1]} onDone={() => setPhase('start')} />
+        )}
       </div>
     </LangContext.Provider>
   )
